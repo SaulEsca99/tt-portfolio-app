@@ -1,5 +1,4 @@
 // Punto de entrada del schema Drizzle.
-// Exporta TODAS las tablas para que drizzle-kit las encuentre.
+// Solo exporta las tablas que este proyecto usa.
 export * from "@server/modules/identity/infrastructure/db/auth.schema";
-export * from "@server/modules/identity/infrastructure/db/profile.schema";
 export * from "./domain.schema";

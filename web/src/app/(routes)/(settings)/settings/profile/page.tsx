@@ -1,8 +1,7 @@
-import { guardAuth } from "@/app/lib/auth-guard";
-import { ProfilePage } from "@/client/modules/identity/features/account-management/profile/profile.page";
+import type { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 
-export default async function Profile() {
-  await guardAuth();
-
-  return <ProfilePage />;
+// Profile route ya no existe — redirige a account
+export async function GET(_req: NextRequest) {
+  return NextResponse.redirect(new URL("/settings/account", _req.url));
 }

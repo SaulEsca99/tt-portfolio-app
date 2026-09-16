@@ -23,16 +23,10 @@ const navigation = [
     description: "Vista general y preferencias",
   },
   {
-    name: "Perfil",
-    href: "/settings/profile",
-    icon: User,
-    description: "Información personal y pública",
-  },
-  {
     name: "Cuenta",
     href: "/settings/account",
     icon: UserCog,
-    description: "Exportar datos y zona de peligro",
+    description: "Datos de cuenta",
   },
   {
     name: "Seguridad",

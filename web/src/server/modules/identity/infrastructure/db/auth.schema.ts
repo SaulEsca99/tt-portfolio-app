@@ -1,5 +1,4 @@
 import { boolean, pgTable, text, timestamp } from "drizzle-orm/pg-core";
-
 import { timestampColumns } from "@server/db/columns.helpers";
 
 export const user = pgTable("user", {
@@ -11,12 +10,8 @@ export const user = pgTable("user", {
   image: text("image"),
 
   phone: text("phone"),
-  birthDate: timestamp("birth_date"),
-  onboardingCompleted: boolean("onboarding_completed").default(false).notNull(),
 
   role: text("role"),
-  isDonor: boolean("is_donor").default(false).notNull(),
-  isBeneficiary: boolean("is_beneficiary").default(false).notNull(),
 
   banned: boolean("banned").default(false),
   banReason: text("ban_reason"),
