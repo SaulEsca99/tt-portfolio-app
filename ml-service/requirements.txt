@@ -1,28 +1,25 @@
-fastapi>=0.115.0
-uvicorn[standard]>=0.30.0
-pydantic>=2.9.0
-pydantic-settings>=2.5.0
+# ============================================================
+# requirements.txt — ml-service
+# Nota: fastapi, uvicorn, sqlalchemy, pydantic, pandas, numpy,
+#       scikit-learn, requests, httpx ya están en el entorno
+#       anaconda3 del sistema. Solo se listan las dependencias
+#       adicionales que hay que instalar.
+# ============================================================
 
-# Base de datos
-sqlalchemy>=2.0.36
-asyncpg>=0.30.0
-alembic>=1.13.0
+# Configuración con .env
+pydantic-settings>=2.5.0
 
 # Datos de mercado
 yfinance>=0.2.51
-pandas>=2.2.0
-numpy>=1.26.0
-requests>=2.32.0
-python-dotenv>=1.0.1
 
-# Modelos LSTM — elige UNO al implementar:
-# tensorflow>=2.18.0        # opción A (más fácil de instalar en Render)
-# torch>=2.4.0              # opción B (PyTorch)
+# Driver async de PostgreSQL
+asyncpg>=0.30.0
 
-# Optimización bioinspirada — elige según implementación:
-# deap>=1.4.1               # Genetic Algorithm
-# pymoo>=0.6.1              # PSO / DE (más completo)
-scikit-learn>=1.5.0
-
-# Seguridad
+# Seguridad (JWT interno)
 python-jose[cryptography]>=3.3.0
+
+# Migraciones de BD
+alembic>=1.13.0
+
+# Relativedelta para fechas en train.py
+python-dateutil>=2.9.0

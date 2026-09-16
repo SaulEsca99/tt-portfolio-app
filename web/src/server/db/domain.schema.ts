@@ -62,7 +62,7 @@ export const priceHistoryTable = pgTable("price_history", {
 
 export const portfolioTable = pgTable("portfolio", {
   id: uuid("id").primaryKey().defaultRandom(),
-  userId: uuid("user_id")
+  userId: text("user_id")            // Better Auth guarda user.id como text
     .references(() => user.id)
     .notNull(),
   name: varchar("name", { length: 255 }).notNull(),
@@ -174,13 +174,13 @@ export const backtestEquityPointTable = pgTable("backtest_equity_point", {
 
 export const chatMessageTable = pgTable("chat_message", {
   id: uuid("id").primaryKey().defaultRandom(),
-  userId: uuid("user_id")
+  userId: text("user_id")            // Better Auth guarda user.id como text
     .references(() => user.id)
     .notNull(),
   portfolioId: uuid("portfolio_id").references(() => portfolioTable.id),
   role: varchar("role", { length: 20 }).notNull(), // "user" | "assistant"
   content: text("content").notNull(),
-  contextSnapshot: jsonb("context_snapshot"), // resultados de optimización relevantes al mensaje
+  contextSnapshot: jsonb("context_snapshot"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
