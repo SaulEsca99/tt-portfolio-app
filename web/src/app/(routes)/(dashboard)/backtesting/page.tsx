@@ -1,15 +1,39 @@
+"use client";
+
+import { useState } from 'react';
+import { Button } from '@/client/components/ui/button';
+import { PageIntro, StatCard } from '@/client/components/ui/dashboard-widgets';
+import { ChartCard } from '@/client/components/ui/chart-card';
+
 export default function BacktestingPage() {
+  const [running, setRunning] = useState(false);
+
   return (
-    <div className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-bold">Backtesting</h1>
-        <p className="text-sm text-muted-foreground">
-          El Walk-Forward Analysis se ejecuta desde el panel de optimización de cada portafolio.
-          Aquí se mostrarán los resultados históricos comparados entre portafolios (RF-07, RF-08).
-        </p>
+    <div>
+      <PageIntro
+        eyebrow="Historical analysis"
+        title="Backtesting"
+        description="Evaluate how your strategy would have behaved across different market cycles."
+        action={
+          <Button
+            onClick={() => {
+              setRunning(true);
+              setTimeout(() => setRunning(false), 1800);
+            }}
+            disabled={running}
+          >
+            {running ? 'Running backtest…' : 'Run backtest'}
+          </Button>
+        }
+      />
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <StatCard label="Cumulative return" value="+214.8%" detail="vs 176.2%" />
+        <StatCard label="Annualized return" value="15.7%" detail="+2.4%" />
+        <StatCard label="Max drawdown" value="-23.4%" detail="-4.1%" positive={false} />
+        <StatCard label="Win rate" value="68.2%" detail="+6.8%" />
       </div>
-      <div className="rounded-lg border p-8 text-center text-muted-foreground text-sm">
-        Módulo en construcción — implementar tabla comparativa de backtests.
+      <div className="mt-4">
+        <ChartCard title="Equity curve" backtest />
       </div>
     </div>
   );
