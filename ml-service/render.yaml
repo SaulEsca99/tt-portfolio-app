@@ -1,0 +1,57 @@
+services:
+  # =========================================================
+  # 1. Web Service — FastAPI (atiende llamadas de Next.js)
+  # =========================================================
+  - type: web
+    name: tt-portfolio-ml-service
+    runtime: python
+    rootDir: ml-service
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    plan: free
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: DATABASE_URL
+        sync: false  # se configura manualmente en el dashboard de Render
+      - key: ML_SERVICE_API_KEY
+        sync: false
+      - key: ALPHA_VANTAGE_API_KEY
+        sync: false
+      - key: LOG_LEVEL
+        value: INFO
+
+  # =========================================================
+  # 2. Cron Job diario — Actualización incremental de precios
+  #    Se ejecuta a las 22:00 CDMX (= 04:00 UTC del día siguiente)
+  #    después del cierre de NY (16:00 ET = 21:00 CDMX)
+  # =========================================================
+  - type: cron
+    name: tt-daily-price-update
+    runtime: python
+    rootDir: ml-service
+    buildCommand: pip install -r requirements.txt
+    schedule: "0 4 * * 2-6"  # Martes–Sábado 04:00 UTC (lunes–viernes NY)
+    startCommand: python -m app.data.price_updater
+    plan: free
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: ALPHA_VANTAGE_API_KEY
+        sync: false
+
+  # =========================================================
+  # 3. Cron Job mensual — Reentrenamiento del modelo LSTM
+  #    Día 1 de cada mes, madrugada (00:00 UTC)
+  # =========================================================
+  - type: cron
+    name: tt-monthly-lstm-retrain
+    runtime: python
+    rootDir: ml-service
+    buildCommand: pip install -r requirements.txt
+    schedule: "0 0 1 * *"  # Día 1 de cada mes, 00:00 UTC
+    startCommand: python -m app.models.train
+    plan: free
+    envVars:
+      - key: DATABASE_URL
+        sync: false

@@ -1,0 +1,61 @@
+# ==========================================
+# Monorepo .gitignore
+# ==========================================
+
+# ---- Entornos ----
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# ---- Python (ml-service) ----
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+.venv/
+venv/
+ENV/
+env/
+*.pth
+.Python
+
+# ---- Node / Next.js (web) ----
+node_modules/
+.next/
+out/
+.vercel
+*.tsbuildinfo
+next-env.d.ts
+
+# ---- Modelos entrenados (pueden ser grandes) ----
+ml-service/models/saved/
+ml-service/models/*.h5
+ml-service/models/*.pt
+ml-service/models/*.pkl
+ml-service/models/*.keras
+
+# ---- OS ----
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# ---- IDE ----
+.vscode/settings.json
+.idea/
+*.iml
+
+# ---- Logs ----
+*.log
+logs/
+
+# ---- Drizzle ----
+# Las migraciones SÍ se versionan; solo ignorar artefactos temporales
+drizzle/meta/__snapshot*.json.tmp

@@ -1,0 +1,28 @@
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+pydantic>=2.9.0
+pydantic-settings>=2.5.0
+
+# Base de datos
+sqlalchemy>=2.0.36
+asyncpg>=0.30.0
+alembic>=1.13.0
+
+# Datos de mercado
+yfinance>=0.2.51
+pandas>=2.2.0
+numpy>=1.26.0
+requests>=2.32.0
+python-dotenv>=1.0.1
+
+# Modelos LSTM — elige UNO al implementar:
+# tensorflow>=2.18.0        # opción A (más fácil de instalar en Render)
+# torch>=2.4.0              # opción B (PyTorch)
+
+# Optimización bioinspirada — elige según implementación:
+# deap>=1.4.1               # Genetic Algorithm
+# pymoo>=0.6.1              # PSO / DE (más completo)
+scikit-learn>=1.5.0
+
+# Seguridad
+python-jose[cryptography]>=3.3.0
