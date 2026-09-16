@@ -1,16 +1,16 @@
 import { PUBLIC_ROUTES } from "@/client/config/routes";
 import { cn } from "@client/lib/utils";
 import { cva, type VariantProps } from "class-variance-authority";
-import Image from "next/image";
 import Link from "next/link";
+import { LineChartIcon } from "lucide-react";
 import * as React from "react";
 
-const logoVariants = cva("relative inline-block", {
+const logoVariants = cva("relative inline-flex items-center gap-2", {
   variants: {
     size: {
-      sm: "h-4 md:h-6 w-auto",
-      md: "h-6 md:h-8 w-auto",
-      lg: "h-10 md:h-12 w-auto",
+      sm: "text-lg",
+      md: "text-xl",
+      lg: "text-2xl",
     },
   },
   defaultVariants: {
@@ -18,39 +18,21 @@ const logoVariants = cva("relative inline-block", {
   },
 });
 
-const LOGO_WIDTH = 200;
-const LOGO_HEIGHT = 200;
-
 export interface LogoProps
   extends React.HTMLAttributes<HTMLAnchorElement>,
-    VariantProps<typeof logoVariants> {
-  src?: string;
-  alt?: string;
-  priority?: boolean;
-}
+    VariantProps<typeof logoVariants> {}
 
-function Logo({
-  className,
-  size,
-  src = "/branding/logo-circle.webp",
-  alt = "Logo",
-  priority = false,
-  ...props
-}: LogoProps) {
+function Logo({ className, size, ...props }: LogoProps) {
   return (
     <Link
       href={PUBLIC_ROUTES.home}
-      className={cn(logoVariants({ size }), "rounded-full", className)}
+      className={cn(logoVariants({ size }), "font-bold text-primary", className)}
       {...props}
     >
-      <Image
-        src={src}
-        alt={alt}
-        width={LOGO_WIDTH}
-        height={LOGO_HEIGHT}
-        priority={priority}
-        className="h-full w-auto object-contain rounded-full"
-      />
+      <div className="flex items-center justify-center bg-primary text-primary-foreground rounded-md p-1.5">
+        <LineChartIcon className="w-5 h-5 sm:w-6 sm:h-6" />
+      </div>
+      <span className="tracking-tight">PortfolioApp</span>
     </Link>
   );
 }
