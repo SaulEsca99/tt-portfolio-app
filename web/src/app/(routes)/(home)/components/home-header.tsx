@@ -1,8 +1,11 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-
-import { FileText, Heart, HouseIcon, PlusCircle } from "lucide-react";
+import Link from "next/link";
+import {
+  LayoutDashboardIcon,
+  TrendingUpIcon,
+} from "lucide-react";
 
 import {
   DesktopNav,
@@ -16,33 +19,20 @@ import {
   HeaderContent,
   HeaderMedia,
 } from "@client/components/layouts/header";
-
 import { authClient } from "@/app/lib/auth-client";
-
 import { Button } from "@/client/components/ui/button";
-import { useDonationValidator } from "@/client/hooks/use-donation-guard";
 import { UserMenuNavbar } from "@/client/modules/identity/features/navigation/user-menu/user-menu-navbar";
-import { useCreateMedicationModal } from "@/client/modules/inventory/features/create-medication/use-create-medication.modal";
 
 export function HomeHeader() {
   const pathname = usePathname();
-  const createModal = useCreateMedicationModal();
-
-  const { validateAndExecute } = useDonationValidator();
-
   const { data: session } = authClient.useSession();
 
-  const landingMenu: DesktopNavItem[] = [
-    { href: "/", label: "Inicio", icon: HouseIcon },
-    { href: "/my-donations", label: "Mis Donaciones", icon: Heart },
-    { href: "/my-requests", label: "Mis Solicitudes", icon: FileText },
+  const navMenu: DesktopNavItem[] = [
+    { href: "/", label: "Inicio", icon: TrendingUpIcon },
+    ...(session?.user
+      ? [{ href: "/dashboard", label: "Dashboard", icon: LayoutDashboardIcon }]
+      : []),
   ];
-
-  const handleCreateClick = () => {
-    validateAndExecute(session?.user, () => {
-      createModal.onOpen();
-    });
-  };
 
   return (
     <Header sticky={true}>
@@ -52,19 +42,22 @@ export function HomeHeader() {
         </HeaderMedia>
 
         <HeaderContent className="mx-auto">
-          <DesktopNav menu={landingMenu} pathname={pathname} />
+          <DesktopNav menu={navMenu} pathname={pathname} />
         </HeaderContent>
 
         <HeaderActions>
-          <Button
-            onClick={handleCreateClick}
-            variant="icon"
-            size="icon-lg"
-            className="gap-2 p-0 roundend-full"
-          >
-            <PlusCircle />
-          </Button>
-          <UserMenuNavbar user={session?.user} />
+          {session?.user ? (
+            <UserMenuNavbar user={session.user} />
+          ) : (
+            <div className="flex items-center gap-2">
+              <Button asChild variant="ghost" size="sm">
+                <Link href="/sign-in">Iniciar sesión</Link>
+              </Button>
+              <Button asChild size="sm">
+                <Link href="/sign-up">Registrarse</Link>
+              </Button>
+            </div>
+          )}
         </HeaderActions>
       </HeaderContainer>
     </Header>

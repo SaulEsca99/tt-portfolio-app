@@ -13,7 +13,6 @@
 import { relations } from "drizzle-orm";
 import {
   bigint,
-  boolean,
   date,
   decimal,
   integer,
@@ -25,9 +24,8 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 
-// La tabla `user` la genera Better Auth — importamos su tipo para las FKs
-// (ver auth.schema.ts en el módulo identity)
-import { userTable } from "@/server/modules/identity/infrastructure/db/auth.schema";
+// La tabla `user` la genera Better Auth — usamos su export para las FKs
+import { user } from "@server/modules/identity/infrastructure/db/auth.schema";
 
 // ---------------------------------------------------------------------------
 // Market Data (dueño: ml-service, creada por Drizzle para compartir)
@@ -65,7 +63,7 @@ export const priceHistoryTable = pgTable("price_history", {
 export const portfolioTable = pgTable("portfolio", {
   id: uuid("id").primaryKey().defaultRandom(),
   userId: uuid("user_id")
-    .references(() => userTable.id)
+    .references(() => user.id)
     .notNull(),
   name: varchar("name", { length: 255 }).notNull(),
   capital: decimal("capital", { precision: 18, scale: 2 }),
@@ -177,7 +175,7 @@ export const backtestEquityPointTable = pgTable("backtest_equity_point", {
 export const chatMessageTable = pgTable("chat_message", {
   id: uuid("id").primaryKey().defaultRandom(),
   userId: uuid("user_id")
-    .references(() => userTable.id)
+    .references(() => user.id)
     .notNull(),
   portfolioId: uuid("portfolio_id").references(() => portfolioTable.id),
   role: varchar("role", { length: 20 }).notNull(), // "user" | "assistant"
