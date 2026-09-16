@@ -1,44 +1,64 @@
-# 📊 TT — Optimización de Carteras de Inversión
+# TT Portfolio App 📈
 
-Monorepo del trabajo terminal. Contiene dos servicios independientes que comparten la misma base de datos PostgreSQL (Supabase).
+Una plataforma moderna e inteligente para la **construcción, optimización y backtesting de portafolios de inversión**. 
 
-```
+Este proyecto utiliza algoritmos cuantitativos (Algoritmo Genético, Enjambre de Partículas, Evolución Diferencial) para encontrar la asignación óptima de activos basada en el perfil de riesgo del usuario, y ofrece un asistente inteligente (Aperture AI) para tomar decisiones financieras informadas.
+
+## 🚀 Tecnologías
+
+El proyecto está dividido en un monorepo (Frontend Web y Microservicio ML):
+
+### Frontend (Next.js)
+- **Framework:** Next.js 16 (App Router) + React 19
+- **Estilos:** Tailwind CSS 4 + shadcn/ui
+- **Gráficas:** Recharts
+- **Autenticación:** Better Auth
+- **Base de Datos / ORM:** Supabase (PostgreSQL) + Drizzle ORM
+- **Lenguaje:** TypeScript
+
+### Backend (Motor de ML/Optimización)
+- **Framework:** FastAPI (Python)
+- **Librerías Financieras:** yfinance, pandas, numpy, scikit-learn
+- **Datos de Mercado:** Alpha Vantage, Yahoo Finance API
+
+## 🧩 Estructura del Proyecto
+
+```text
 tt-portfolio-app/
-├── web/          # Next.js 16 + React 19 + TypeScript  → Vercel
-└── ml-service/   # FastAPI (Python)                    → Render
+├── web/              # Frontend en Next.js
+│   ├── src/app/      # Rutas de la aplicación (Dashboard, Auth, etc.)
+│   ├── src/client/   # Componentes UI (shadcn, gráficas, layouts)
+│   └── src/server/   # Lógica de backend (Better Auth, Drizzle Schema)
+│
+├── ml-service/       # Microservicio Python
+│   ├── app/          # Endpoints de FastAPI (optimize, backtest, predict)
+│   └── requirements/ # Dependencias de Anaconda/Python
+│
+└── README.md
 ```
 
-## Arquitectura rápida
+## 🛠️ Cómo Correr el Proyecto (Desarrollo)
 
+### 1. Iniciar el Motor de Python (FastAPI)
+Asegúrate de tener un entorno con Python (ej. Anaconda) y las dependencias instaladas.
+```bash
+cd ml-service
+uvicorn app.main:app --reload --port 8000
 ```
-Navegador → Next.js (Vercel)
-                ↓ ML_SERVICE_API_KEY (interno, nunca al cliente)
-            FastAPI (Render)
-                ↓
-            PostgreSQL (Supabase) ← ambos servicios comparten la misma BD
+
+### 2. Iniciar el Frontend (Next.js)
+```bash
+cd web
+pnpm install
+pnpm dev
 ```
+La aplicación estará disponible en `http://localhost:3000`.
 
-> Regla de frontera: el servicio Python **nunca** es accesible desde el navegador.  
-> Solo el backend de Next.js puede llamarlo, usando `ML_SERVICE_API_KEY`.
+## 📊 Vistas Principales
 
-## Módulos del dominio
-
-| Módulo | RF | Descripción |
-|---|---|---|
-| Identity | RF-11 | Auth, sesiones, perfil (Better Auth) |
-| Portfolio Builder | RF-06 | Configuración de portafolio, activos candidatos, restricciones |
-| Optimization | RF-04, 05, 09 | GA / PSO / DE — ejecuta y muestra resultados |
-| Backtesting | RF-07, 08 | Walk-Forward, comparación vs benchmarks |
-| Assistant | RF-10 | Chat conversacional sobre resultados |
-| Market Data | RF-01, 02 | Obtención y almacenamiento de precios históricos |
-
-## Docs
-
-- [`web/`](./web/README.md) — Setup del frontend / backend Next.js
-- [`ml-service/`](./ml-service/README.md) — Setup del servicio Python
-
-## Convenciones
-
-- Commits: [Conventional Commits](https://www.conventionalcommits.org/)
-- Carpetas: `kebab-case` | Componentes: `PascalCase` | Funciones: `camelCase`
-- Regla de dependencia: `Client → Shared ← Server` (Next.js); Python nunca importa código de `web/`
+1. **Dashboard:** Visión general de los portafolios y su desempeño en tiempo real.
+2. **Portfolio Builder:** Constructor de estrategias ajustando el perfil de riesgo.
+3. **Optimización:** Herramientas cuantitativas para hallar la *frontera eficiente*.
+4. **Backtesting:** Evaluación histórica del rendimiento (Equity Curve vs Benchmark).
+5. **Market Data:** Datos de mercado en vivo y predicciones a corto plazo con LSTM.
+6. **AI Assistant:** Chatbot para consultar métricas y recibir recomendaciones de balanceo.
