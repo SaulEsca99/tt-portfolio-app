@@ -8,7 +8,7 @@ import { authConfig } from "@/server/modules/identity/infrastructure/auth-provid
 
 export const auth = betterAuth({
   ...authConfig,
-  plugins: [...authConfig.plugins, nextCookies()],
+  plugins: [nextCookies()],
 });
 
 export const getSession = cache(async () =>

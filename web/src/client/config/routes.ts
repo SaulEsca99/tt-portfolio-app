@@ -11,20 +11,18 @@ export const SETTINGS_ROUTES = {
   general: "/settings",
   account: "/settings/account",
   security: "/settings/security",
-  profile: {
-    general: "/settings/profile",
-    donor: "/settings/profile/donor",
-    recipient: "/settings/profile/recipient",
-  },
 } as const;
 
-export const ADMIN_ROUTES = {
-  dashboard: "/admin",
-  medications: "/admin/medications",
-  requests: "/admin/requests",
-  users: "/admin/users",
+export const DASHBOARD_ROUTES = {
+  home: "/dashboard",
+  portfolios: "/portfolios",
+  optimize: "/optimize",
+  backtesting: "/backtesting",
+  marketData: "/market-data",
+  assistant: "/assistant",
 } as const;
 
 export const ROUTES = {
   ...PUBLIC_ROUTES,
-};
+  ...DASHBOARD_ROUTES,
+} as const;
