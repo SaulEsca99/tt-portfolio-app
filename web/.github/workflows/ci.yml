@@ -1,0 +1,87 @@
+name: CI Pipeline
+
+on:
+  pull_request:
+    branches: [master]
+  push:
+    branches: [master]
+
+jobs:
+  quality-checks:
+    name: Code Quality & Build
+    runs-on: ubuntu-latest
+    
+    env:
+      SKIP_ENV_VALIDATION: true
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+      
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      
+      - name: Run ESLint
+        run: pnpm run lint
+      
+      - name: Build project
+        run: pnpm run build
+      
+      # Descomentar cuando tests estén configurados
+      # - name: Run tests
+      #   run: pnpm test
+
+  commit-validation:
+    name: Validate Commit Messages
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Validate commits
+        run: |
+          # Validar que los commits sigan Conventional Commits
+          echo "Validating commits from origin/master to HEAD..."
+          
+          commits=$(git log --format=%s origin/master..HEAD)
+          
+          if [ -z "$commits" ]; then
+            echo "✅ No commits to validate"
+            exit 0
+          fi
+          
+          echo "$commits" | while read -r commit; do
+            # Skip merge commits (they don't follow conventional format)
+            if echo "$commit" | grep -qE '^Merge '; then
+              echo "⏭️  Skipping merge commit: $commit"
+              continue
+            fi
+            
+            if echo "$commit" | grep -qE '^(feat|fix|chore|docs|refactor|test|style|perf)(\(.+\))?: .+'; then
+              echo "✅ Valid: $commit"
+            else
+              echo "❌ Invalid: $commit"
+              echo ""
+              echo "Error: Los commits deben seguir Conventional Commits"
+              echo "Formato: tipo(scope): descripción"
+              echo "Ejemplo: feat(identity): add user registration"
+              echo ""
+              echo "Tipos permitidos: feat, fix, chore, docs, refactor, test, style, perf"
+              exit 1
+            fi
+          done

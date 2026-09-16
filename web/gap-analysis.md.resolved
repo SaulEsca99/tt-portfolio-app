@@ -1,0 +1,533 @@
+# 🔍 Análisis de Brecha: Especificaciones vs Implementación Actual
+
+**Fecha:** 16 de Diciembre, 2025  
+**Comparación:** Especificaciones (analisis_comparativo_priorizacion.md) vs Implementación de Edwin (PR #7 y #8)
+
+---
+
+## 📊 Resumen Ejecutivo
+
+Edwin ha establecido **la infraestructura base** para autenticación y formularios, pero **0% de la lógica de negocio** está implementada. De los **31 requerimientos funcionales**, solo se ha avanzado en la **configuración técnica** que soportará ~5 RF del módulo Identity.
+
+### Estado General
+- ✅ **Infraestructura técnica:** 80% completa
+- ⚠️ **Lógica de negocio:** 0% implementada
+- ❌ **Funcionalidades de usuario:** 0% implementadas
+
+---
+
+## ✅ Lo que Edwin YA Implementó
+
+### 1. **Infraestructura de Autenticación (PR #8)** ✅
+
+#### Configuración Técnica Completa:
+- ✅ Better Auth instalado y configurado
+- ✅ Integración con Drizzle ORM
+- ✅ Plugin de administrador ([admin.plugin.ts](file:///home/cyborg-15/Donamed/donamed/src/server/modules/identity/infrastructure/auth-provider/admin.plugin.ts))
+- ✅ Endpoints API (`/api/auth/[...all]`)
+- ✅ Cliente de autenticación para frontend
+- ✅ Validación de variables de entorno ([src/env.ts](file:///home/cyborg-15/Donamed/donamed/src/env.ts))
+
+#### Schema de Base de Datos (4 tablas):
+```sql
+✅ user (id, name, email, email_verified, phone, birth_date, 
+         role, is_donor, is_beneficiary, banned, ban_reason, ban_expires)
+✅ session (id, expires_at, token, ip_address, user_agent, user_id)
+✅ account (id, account_id, provider_id, user_id, access_token, ...)
+✅ verification (id, identifier, value, expires_at)
+```
+
+#### Casos de Uso Implementados:
+- ✅ Estructura de [sign-up.use-case.ts](file:///home/cyborg-15/Donamed/donamed/src/server/modules/identity/features/auth-flow/sign-up/sign-up.use-case.ts) (vacía, solo retorna success)
+- ✅ DTOs con validación Zod ([sign-up.dto.ts](file:///home/cyborg-15/Donamed/donamed/src/server/modules/identity/features/auth-flow/sign-up/sign-up.dto.ts))
+- ✅ Adaptador de validación ([sign-up.adapter.ts](file:///home/cyborg-15/Donamed/donamed/src/server/modules/identity/features/auth-flow/sign-up/sign-up.adapter.ts))
+
+#### Errores y Validaciones:
+- ✅ [identity.errors.ts](file:///home/cyborg-15/Donamed/donamed/src/server/modules/identity/domain/identity.errors.ts) - Errores del dominio
+- ✅ [identity.validation.ts](file:///home/cyborg-15/Donamed/donamed/src/server/modules/identity/domain/identity.validation.ts) - Reglas de validación
+- ✅ [src/server/shared/errors.ts](file:///home/cyborg-15/Donamed/donamed/src/server/shared/errors.ts) - Errores compartidos
+
+---
+
+### 2. **Infraestructura de Formularios (PR #7)** ✅
+
+#### Componentes de Formulario:
+- ✅ `form-context.ts` - Contexto de TanStack Form
+- ✅ [form-input.tsx](file:///home/cyborg-15/Donamed/donamed/src/client/components/forms/form-input.tsx) - Adaptador de input (41 líneas)
+- ✅ [form-password.tsx](file:///home/cyborg-15/Donamed/donamed/src/client/components/forms/form-password.tsx) - Adaptador de password (74 líneas)
+- ✅ [form-subscribe-button.tsx](file:///home/cyborg-15/Donamed/donamed/src/client/components/forms/form-subscribe-button.tsx) - Botón de suscripción (22 líneas)
+
+#### Componentes UI:
+- ✅ [input-group.tsx](file:///home/cyborg-15/Donamed/donamed/src/client/components/ui/input-group.tsx) - Componente de grupo de inputs (170 líneas)
+- ✅ 40+ componentes shadcn/ui ya instalados
+
+#### Documentación:
+- ✅ ADR-008: Estrategia de manejo de formularios
+
+---
+
+### 3. **Configuración del Proyecto** ✅
+- ✅ Variables de entorno configuradas (`.env.example` actualizado)
+- ✅ Migraciones de Drizzle generadas
+- ✅ Helpers de base de datos (`columns.helpers.ts`, `db.helpers.ts`)
+- ✅ TanStack Form + Devtools instalados
+
+---
+
+## ❌ Lo que FALTA Implementar
+
+### 📋 Resumen por Módulo
+
+| Módulo | RF Totales | RF Implementados | % Completado | Prioridad |
+|--------|-----------|------------------|--------------|-----------|
+| **Identity** | 5 | 0.5 (solo estructura) | **10%** | 🔴 CRÍTICA |
+| **Inventory** | 7 | 0 | **0%** | 🔴 CRÍTICA |
+| **Matchmaking** | 4 | 0 | **0%** | 🟡 ALTA |
+| **Coordination** | 5 | 0 | **0%** | 🟡 ALTA |
+| **Resolution** | 5 | 0 | **0%** | 🟢 MEDIA |
+| **Governance** | 5 | 0 | **0%** | 🔵 BAJA |
+| **TOTAL** | **31** | **0.5** | **~2%** | - |
+
+---
+
+## 🥇 Módulo #1: Identity (Prioridad CRÍTICA)
+
+### ✅ Lo que Edwin hizo:
+- ✅ Tabla `user` con campos básicos
+- ✅ Campos `is_donor` y `is_beneficiary` (booleanos)
+- ✅ Estructura de sign-up (sin lógica)
+- ✅ Better Auth configurado
+
+### ❌ Lo que FALTA:
+
+#### **RF1: Registro con Roles** - 50% completo
+- ✅ Tabla `user` existe
+- ❌ **FALTA:** Lógica de registro real en [sign-up.use-case.ts](file:///home/cyborg-15/Donamed/donamed/src/server/modules/identity/features/auth-flow/sign-up/sign-up.use-case.ts)
+- ❌ **FALTA:** UI de formulario de registro
+- ❌ **FALTA:** Diferenciación de flujos Donador vs Receptor
+
+#### **RF2: Validación de Datos** - 30% completo
+- ✅ Validación Zod configurada
+- ❌ **FALTA:** Validaciones específicas (formato email, contraseña fuerte)
+- ❌ **FALTA:** Validación de matrícula médica (para donadores médicos)
+
+#### **RF3: Autenticación** - 60% completo
+- ✅ Better Auth configurado
+- ✅ Endpoints `/api/auth` expuestos
+- ❌ **FALTA:** UI de Login
+- ❌ **FALTA:** UI de Logout
+- ❌ **FALTA:** Protección de rutas por rol
+
+#### **RF4: Perfiles de Usuario** - 0% completo
+- ❌ **FALTA:** Tabla `donor_profiles`
+- ❌ **FALTA:** Tabla `recipient_profiles`
+- ❌ **FALTA:** UI de perfil con estadísticas
+- ❌ **FALTA:** Lógica de contador de donaciones
+
+#### **RF5: Restricciones por Rol** - 0% completo
+- ❌ **FALTA:** Middleware de autorización
+- ❌ **FALTA:** Validación de permisos en Server Actions
+- ❌ **FALTA:** UI condicional según rol
+
+#### **NUEVOS Requerimientos (del análisis):**
+- ❌ **FALTA:** Campo `medical_license` en `donor_profiles`
+- ❌ **FALTA:** Campo `socioeconomic_score` en `recipient_profiles`
+- ❌ **FALTA:** Examen socioeconómico (pendiente definir preguntas)
+- ❌ **FALTA:** Validación de matrícula médica para medicamentos controlados
+
+---
+
+## 🥈 Módulo #2: Inventory (Prioridad CRÍTICA)
+
+### ✅ Lo que Edwin hizo:
+- ❌ **NADA** - Este módulo no existe aún
+
+### ❌ Lo que FALTA:
+
+#### **Entidades de Base de Datos:**
+```typescript
+❌ medications (
+  id, donor_id, active_substance, dosage, quantity, 
+  brand, expiry_date, photo_url, lot, status, 
+  location, preferred_schedule, created_at
+)
+```
+
+#### **RF6: Publicar Medicamento** - 0%
+- ❌ Formulario de publicación
+- ❌ Validación de campos obligatorios
+- ❌ Subida de foto del medicamento
+- ❌ Server Action para crear publicación
+
+#### **RF7: Información Completa** - 0%
+- ❌ Campos: sustancia activa, gramaje, cantidad, marca, caducidad, lote
+
+#### **RF8: Validación de Caducidad** - 0%
+- ❌ Validación que caducidad > 30 días
+- ❌ Mensaje de error si no cumple
+
+#### **RF9: Estados de Publicación** - 0%
+- ❌ Enum: `disponible`, `reservado`, `entregado`, `cancelado`
+- ❌ Lógica de transición de estados
+
+#### **RF10: Ocultamiento Automático** - 0%
+- ❌ Cron job para verificar caducidad
+- ❌ Lógica de ocultar si < 30 días
+
+#### **RF11: Ver Solicitudes** - 0%
+- ❌ UI para donador ver solicitudes recibidas
+- ❌ Query para obtener solicitudes por medicamento
+
+#### **RF12: Seleccionar Receptor** - 0%
+- ❌ UI para seleccionar receptor
+- ❌ Lógica de aceptar solicitud
+
+---
+
+## 🥉 Módulo #3: Matchmaking (Prioridad ALTA)
+
+### ❌ Lo que FALTA:
+
+#### **Entidades de Base de Datos:**
+```typescript
+❌ requests (id, medication_id, recipient_id, medical_justification, status, created_at)
+❌ donations (id, medication_id, donor_id, recipient_id, status, created_at)
+```
+
+#### **RF13: Búsqueda de Medicamentos** - 0%
+- ❌ Buscador por sustancia activa
+- ❌ Filtro por gramaje
+- ❌ Algoritmo de distancia (sugerencia por cercanía)
+
+#### **RF14: Solicitar Medicamento** - 0%
+- ❌ Botón "Solicitar"
+- ❌ Validación de duplicidad (no solicitar si ya tiene donación activa)
+
+#### **RF15: Formulario de Necesidad Médica** - 0%
+- ❌ Campo de justificación médica
+- ❌ Validación de campo obligatorio
+
+#### **RF16: Prevención de Duplicidad** - 0%
+- ❌ Validación: 1 donación activa por receptor
+- ❌ Mensaje de error si ya tiene donación activa
+
+---
+
+## 🔧 Módulo #4: Coordination (Prioridad ALTA)
+
+### ❌ Lo que FALTA:
+
+#### **Entidades de Base de Datos:**
+```typescript
+❌ delivery_locations (id, name, address, postal_code, coordinates)
+❌ delivery_orders (id, donation_id, location_id, pdf_url, qr_code, created_at)
+```
+
+#### **RF17: Notificación de Match** - 0%
+- ❌ Sistema de notificaciones por correo
+- ❌ Template de email "Match encontrado"
+
+#### **RF18: Selección de Lugar** - 0%
+- ❌ Catálogo de lugares predefinidos
+- ❌ UI para donador seleccionar lugar
+- ❌ Campo de horario preferido
+
+#### **RF19: Generación de Orden** - 0%
+- ❌ Generación de PDF con datos de donación
+- ❌ QR code o ID único
+- ❌ Almacenamiento del PDF
+
+#### **RF20: Envío de Orden** - 0%
+- ❌ Envío de correo a donador con PDF
+- ❌ Envío de correo a receptor con PDF
+
+#### **RF21: Confirmación de Recepción** - 0%
+- ❌ Notificación de confirmación
+
+---
+
+## 📄 Módulo #5: Resolution (Prioridad MEDIA)
+
+### ❌ Lo que FALTA:
+
+#### **RF22: Firma Física** - 0%
+- ❌ UI para subir foto/PDF de orden firmada
+- ❌ Validación de formato de archivo
+- ❌ Almacenamiento de archivo
+
+#### **RF23: Validación de Archivo** - 0%
+- ❌ Validación de tamaño máximo
+- ❌ Validación de tipo de archivo (PDF, JPG, PNG)
+
+#### **RF24: Actualización de Estado** - 0%
+- ❌ Cambio de estado a "entregado"
+- ❌ Actualización de contadores de donaciones
+
+#### **RF25: Confirmación Final** - 0%
+- ❌ Notificación de donación completada
+
+#### **RF26: Historial** - 0%
+- ❌ UI de historial de donaciones
+- ❌ Query para obtener historial
+
+---
+
+## 🛡️ Módulo #6: Governance (Prioridad BAJA)
+
+### ❌ Lo que FALTA:
+
+#### **Entidades de Base de Datos:**
+```typescript
+❌ reports (id, reporter_id, reported_user_id, reason, status, created_at)
+```
+
+#### **RF27: Panel Administrativo** - 0%
+- ❌ UI de dashboard administrativo
+- ❌ Middleware de autorización para admins
+
+#### **RF28: Gestión de Lugares** - 0%
+- ❌ CRUD de lugares de entrega
+- ❌ UI de administración
+
+#### **RF29: Gestión de Usuarios** - 0%
+- ❌ UI para listar usuarios
+- ❌ Funcionalidad de banear usuarios
+
+#### **RF30: Estadísticas** - 0%
+- ❌ Dashboard de métricas
+- ❌ Gráficas de donaciones
+
+#### **RF31: Sistema de Reportes** - 0%
+- ❌ UI para reportar usuarios
+- ❌ Panel de revisión de reportes
+
+---
+
+## 📊 Análisis Detallado por Componente
+
+### 🗄️ Base de Datos
+
+#### ✅ Tablas Implementadas (4):
+1. `user` - Usuarios básicos con roles
+2. `session` - Sesiones de Better Auth
+3. `account` - Cuentas OAuth
+4. `verification` - Verificaciones de email
+
+#### ❌ Tablas FALTANTES (5):
+1. **`donor_profiles`** - Perfiles de donadores
+   ```sql
+   (user_id, postal_code, birth_date, medical_license, 
+    total_donations, recent_donations)
+   ```
+
+2. **`recipient_profiles`** - Perfiles de receptores
+   ```sql
+   (user_id, birth_date, disabilities, allergies, 
+    socioeconomic_score, total_received)
+   ```
+
+3. **`medications`** - Inventario de medicamentos
+   ```sql
+   (id, donor_id, active_substance, dosage, quantity, brand, 
+    expiry_date, photo_url, lot, status, location, 
+    preferred_schedule, created_at)
+   ```
+
+4. **`requests`** - Solicitudes de medicamentos
+   ```sql
+   (id, medication_id, recipient_id, medical_justification, 
+    status, created_at)
+   ```
+
+5. **`donations`** - Tracking de donaciones
+   ```sql
+   (id, medication_id, donor_id, recipient_id, status, 
+    delivery_location_id, delivery_order_url, created_at)
+   ```
+
+6. **`delivery_locations`** - Lugares de entrega
+   ```sql
+   (id, name, address, postal_code, coordinates)
+   ```
+
+7. **`delivery_orders`** - Órdenes de entrega
+   ```sql
+   (id, donation_id, pdf_url, qr_code, created_at)
+   ```
+
+8. **`reports`** - Reportes/Denuncias
+   ```sql
+   (id, reporter_id, reported_user_id, reason, status, 
+    admin_notes, created_at)
+   ```
+
+---
+
+### 🎨 Frontend (Cliente)
+
+#### ✅ Lo que existe:
+- ✅ Componentes de formulario (TanStack Form)
+- ✅ 40+ componentes UI (shadcn/ui)
+- ✅ Input, Password, Button adaptadores
+
+#### ❌ Lo que FALTA:
+- ❌ Página de registro
+- ❌ Página de login
+- ❌ Dashboard de donador
+- ❌ Dashboard de receptor
+- ❌ Formulario de publicación de medicamento
+- ❌ Buscador de medicamentos
+- ❌ Formulario de solicitud
+- ❌ Vista de solicitudes recibidas
+- ❌ Selección de lugar de entrega
+- ❌ Subida de orden firmada
+- ❌ Historial de donaciones
+- ❌ Panel administrativo
+- ❌ Sistema de reportes
+
+---
+
+### ⚙️ Backend (Servidor)
+
+#### ✅ Lo que existe:
+- ✅ Estructura del módulo `identity`
+- ✅ Better Auth configurado
+- ✅ Validación de env vars
+- ✅ Helpers de DB
+
+#### ❌ Lo que FALTA:
+- ❌ Lógica real de sign-up
+- ❌ Lógica de login
+- ❌ Middleware de autorización
+- ❌ Módulo `inventory` completo
+- ❌ Módulo `matchmaking` completo
+- ❌ Módulo `coordination` completo
+- ❌ Módulo `resolution` completo
+- ❌ Módulo `governance` completo
+- ❌ Sistema de notificaciones por correo
+- ❌ Cron jobs (validación de caducidad)
+- ❌ Generación de PDFs
+- ❌ Algoritmo de distancia
+- ❌ Subida de archivos (fotos, PDFs)
+
+---
+
+## 🎯 Próximos Pasos Recomendados
+
+### **Fase 1: Completar Identity (Semana 1)** 🔴 CRÍTICO
+
+| Tarea | Estimación | Descripción |
+|-------|-----------|-------------|
+| **1.1 Crear tablas de perfiles** | 2h | `donor_profiles` y `recipient_profiles` |
+| **1.2 Implementar sign-up real** | 4h | Lógica completa en [sign-up.use-case.ts](file:///home/cyborg-15/Donamed/donamed/src/server/modules/identity/features/auth-flow/sign-up/sign-up.use-case.ts) |
+| **1.3 UI de Registro** | 6h | Formulario con TanStack Form |
+| **1.4 UI de Login** | 4h | Formulario de login |
+| **1.5 Middleware de autorización** | 3h | Protección de rutas |
+| **1.6 UI de Perfil** | 4h | Vista de perfil con estadísticas |
+| **TOTAL** | **~3 días** | - |
+
+### **Fase 2: Implementar Inventory (Semana 2)** 🔴 CRÍTICO
+
+| Tarea | Estimación | Descripción |
+|-------|-----------|-------------|
+| **2.1 Crear tabla medications** | 1h | Schema de Drizzle |
+| **2.2 CRUD de medicamentos** | 6h | Server Actions |
+| **2.3 UI de publicación** | 8h | Formulario completo con foto |
+| **2.4 Validación de caducidad** | 3h | Lógica + cron job |
+| **2.5 Estados de publicación** | 2h | Enum + transiciones |
+| **TOTAL** | **~2.5 días** | - |
+
+### **Fase 3: Implementar Matchmaking (Semana 3)** 🟡 ALTA
+
+| Tarea | Estimación | Descripción |
+|-------|-----------|-------------|
+| **3.1 Crear tablas requests/donations** | 1h | Schema de Drizzle |
+| **3.2 Buscador de medicamentos** | 6h | UI + algoritmo de distancia |
+| **3.3 Sistema de solicitudes** | 6h | Formulario + validación |
+| **3.4 Selección de receptor** | 4h | UI + lógica |
+| **TOTAL** | **~2 días** | - |
+
+---
+
+## 📋 Checklist de Implementación
+
+### Base de Datos
+- [ ] Crear `donor_profiles`
+- [ ] Crear `recipient_profiles`
+- [ ] Crear `medications`
+- [ ] Crear `requests`
+- [ ] Crear `donations`
+- [ ] Crear `delivery_locations`
+- [ ] Crear `delivery_orders`
+- [ ] Crear `reports`
+
+### Módulo Identity
+- [ ] Implementar lógica de sign-up
+- [ ] Implementar lógica de login
+- [ ] Crear UI de registro
+- [ ] Crear UI de login
+- [ ] Implementar middleware de autorización
+- [ ] Crear UI de perfil
+- [ ] Agregar validación de matrícula médica
+- [ ] Implementar examen socioeconómico
+
+### Módulo Inventory
+- [ ] CRUD de medicamentos
+- [ ] UI de publicación
+- [ ] Validación de caducidad
+- [ ] Ocultamiento automático
+- [ ] Estados de publicación
+- [ ] Ver solicitudes
+- [ ] Seleccionar receptor
+
+### Módulo Matchmaking
+- [ ] Buscador de medicamentos
+- [ ] Algoritmo de distancia
+- [ ] Sistema de solicitudes
+- [ ] Formulario de necesidad médica
+- [ ] Prevención de duplicidad
+
+### Módulo Coordination
+- [ ] Catálogo de lugares
+- [ ] Selección de lugar
+- [ ] Generación de PDF
+- [ ] Sistema de notificaciones
+- [ ] Envío de correos
+
+### Módulo Resolution
+- [ ] Subida de orden firmada
+- [ ] Validación de archivo
+- [ ] Actualización de estado
+- [ ] Confirmación final
+- [ ] Historial
+
+### Módulo Governance
+- [ ] Panel administrativo
+- [ ] Gestión de lugares
+- [ ] Gestión de usuarios
+- [ ] Estadísticas
+- [ ] Sistema de reportes
+
+---
+
+## 🎓 Conclusión
+
+### ✅ Logros de Edwin:
+- Excelente elección de stack técnico (Better Auth + TanStack Form)
+- Infraestructura sólida y bien documentada (ADRs)
+- Arquitectura modular correcta (Domain-Driven Design)
+- Configuración completa de autenticación
+
+### ⚠️ Estado Actual:
+- **Infraestructura:** 80% completa ✅
+- **Lógica de negocio:** 0% implementada ❌
+- **Funcionalidades:** ~2% del total (0.5/31 RF)
+
+### 🚀 Siguiente Paso:
+**Completar Fase 1 (Identity)** para tener usuarios funcionales y poder avanzar con el resto de módulos.
+
+**Tiempo estimado para MVP (Fases 1-3):** ~4-6 semanas
+
+---
+
+**Generado:** 2025-12-16 22:05 CST

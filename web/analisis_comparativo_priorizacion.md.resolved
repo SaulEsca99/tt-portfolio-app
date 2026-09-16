@@ -1,0 +1,366 @@
+# Análisis Comparativo: Nueva Documentación vs Arquitectura Actual
+
+## 📊 Resumen Ejecutivo
+
+La nueva documentación de DONAMED define **31 requerimientos funcionales** organizados en **7 fases de negocio**. El proyecto actual tiene una arquitectura bien definida pero **sin implementación funcional** - solo cuenta con estructura base, componentes UI de shadcn, y configuración inicial.
+
+---
+
+## 🛠️ Stack Técnico Confirmado
+
+| Componente | Tecnología | Justificación |
+|------------|------------|---------------|
+| **Framework** | Next.js 16 + React 19 | App Router, Server Actions, RSC |
+| **Autenticación** | **Better Auth** | TypeScript-first, integración nativa con Next.js 16 y Drizzle, plugin ecosystem robusto |
+| **ORM** | **Drizzle ORM** | Sintaxis similar a SQL (fácil aprendizaje), mejor performance que Prisma, ideal para serverless |
+| **Base de Datos** | PostgreSQL | Relaciones complejas, integridad referencial |
+| **UI Components** | shadcn/ui | Componentes accesibles y customizables |
+| **Validación** | Zod | Type-safe schemas |
+| **Styling** | Tailwind CSS v4 | Utility-first CSS |
+
+> [!NOTE]
+> **¿Por qué Drizzle?** Su sintaxis es casi idéntica a SQL nativo, lo que facilita el aprendizaje y debugging. Además, tiene mejor performance que Prisma en entornos serverless (cold start ~10x más rápido).
+
+> [!NOTE]
+> **¿Por qué Better Auth?** Ofrece autenticación completa out-of-the-box (OAuth, 2FA, magic links) con type-safety total y se integra perfectamente con Drizzle ORM.
+
+---
+
+## 🔍 Estado Actual del Proyecto
+
+### ✅ Lo que YA existe:
+- **Arquitectura definida**: Monolito modular con separación cliente/servidor
+- **6 módulos conceptuales**: Identity, Inventory, Matchmaking, Coordination, Resolution, Governance
+- **Stack técnico completo**: Next.js 16, React 19, PostgreSQL, Drizzle ORM, shadcn/ui
+- **Infraestructura**: CI/CD, ESLint, Docker Compose, Husky hooks
+- **Componentes UI**: 40+ componentes de shadcn/ui instalados
+- **Documentación**: ADRs, ARCHITECTURE.md, CONTRIBUTING.md
+
+### ❌ Lo que NO existe (todo por implementar):
+- **Base de datos**: [schema.ts](file:///home/cyborg-15/Donamed/donamed/src/server/db/schema.ts) está vacío (solo `export {}`)
+- **Servicios backend**: No hay carpeta `src/server/modules/`
+- **Módulos frontend**: No hay carpeta `src/client/modules/`
+- **Autenticación**: Sin sistema de login/registro
+- **API endpoints**: Solo existe [/api/health](file:///home/cyborg-15/Donamed/donamed/src/app/api/health)
+- **Lógica de negocio**: Ninguna funcionalidad implementada
+
+---
+
+## 🆚 Comparación: Documentación Nueva vs Arquitectura Actual
+
+### ✅ Alineación Perfecta
+
+| Aspecto | Nueva Documentación | Arquitectura Actual | Estado |
+|---------|---------------------|---------------------|--------|
+| **Separación Cliente/Servidor** | ✅ Implícito en RF | ✅ Hexagonal | ✅ Alineado |
+| **Módulos por dominio** | ✅ 7 fases = 6 módulos | ✅ 6 módulos definidos | ✅ Alineado |
+| **Base de datos relacional** | ✅ Relaciones complejas | ✅ PostgreSQL + Drizzle | ✅ Alineado |
+| **Roles diferenciados** | ✅ Donador/Receptor/Admin | ✅ RF5 | ✅ Alineado |
+
+### ⚠️ Ajustes Necesarios
+
+| Elemento | Nueva Documentación | Arquitectura Actual | Acción Requerida |
+|----------|---------------------|---------------------|------------------|
+| **Chat temporal** | ❌ NO mencionado | ✅ Módulo "Coordination" con chat | 🔧 **ELIMINAR** módulo de chat |
+| **Lugares predefinidos** | ✅ RF18, RF28 | ❌ No contemplado | 🔧 **AGREGAR** entidad `delivery_locations` |
+| **Examen socioeconómico** | ✅ Fase 1 (pendiente definir) | ❌ No contemplado | 🔧 **AGREGAR** a módulo Identity |
+| **Validación de médicos** | ✅ Matrícula para controlados | ❌ No contemplado | 🔧 **AGREGAR** campo `medical_license` |
+| **Sistema de reportes** | ✅ RF31 (denuncias) | ❌ No contemplado | 🔧 **AGREGAR** entidad `reports` |
+| **Firma digital** | ❌ NO (firma física) | ✅ Mencionado en Resolution | 🔧 **CAMBIAR** a subida de imagen/PDF |
+
+---
+
+## 🚫 Funcionalidades a ELIMINAR o MODIFICAR
+
+### 1. **Módulo "Coordination" - Chat Temporal** ❌
+**Razón**: La nueva documentación NO menciona chat. La coordinación es simplemente:
+- Donador selecciona lugar predefinido
+- Sistema genera PDF
+- Ambos reciben correo
+
+**Acción**: 
+- ✅ Mantener módulo "Coordination" pero SIN chat
+- ✅ Enfocarlo en: selección de lugar, generación de PDF, notificaciones
+
+### 2. **Firmas Digitales** ❌
+**Razón**: RF22 dice "Requerir firma física de ambas partes"
+
+**Acción**:
+- ❌ NO implementar firma digital/electrónica
+- ✅ Solo permitir subida de foto/PDF de orden firmada físicamente
+
+---
+
+## 🎯 Mapeo: Requerimientos Funcionales → Módulos
+
+| Módulo | Requerimientos Funcionales | Prioridad |
+|--------|---------------------------|-----------|
+| **Identity** | RF1, RF2, RF3, RF4, RF5 | 🔴 **CRÍTICA** |
+| **Inventory** | RF6, RF7, RF8, RF9, RF10, RF11, RF12 | 🔴 **CRÍTICA** |
+| **Matchmaking** | RF13, RF14, RF15, RF16 | 🟡 **ALTA** |
+| **Coordination** | RF17, RF18, RF19, RF20, RF21 | 🟡 **ALTA** |
+| **Resolution** | RF22, RF23, RF24, RF25, RF26 | 🟢 **MEDIA** |
+| **Governance** | RF27, RF28, RF29, RF30, RF31 | 🔵 **BAJA** |
+
+---
+
+## 📈 Matriz de Priorización de Módulos
+
+### Criterios de Evaluación:
+1. **Valor de Negocio** (1-5): ¿Qué tan crítico es para el flujo principal?
+2. **Dependencias** (1-5): ¿Cuántos módulos dependen de este?
+3. **Esfuerzo** (1-5): ¿Qué tan complejo es implementar? (1=fácil, 5=difícil)
+4. **Score de Prioridad**: (Valor × Dependencias) / Esfuerzo
+
+| Módulo | Valor | Dependencias | Esfuerzo | Score | Prioridad |
+|--------|-------|--------------|----------|-------|-----------|
+| **Identity** | 5 | 5 | 3 | **8.3** | 🥇 **#1** |
+| **Inventory** | 5 | 4 | 4 | **5.0** | 🥈 **#2** |
+| **Matchmaking** | 4 | 3 | 3 | **4.0** | 🥉 **#3** |
+| **Coordination** | 4 | 2 | 3 | **2.7** | **#4** |
+| **Resolution** | 3 | 1 | 2 | **1.5** | **#5** |
+| **Governance** | 2 | 1 | 3 | **0.7** | **#6** |
+
+---
+
+## 🏆 Módulos Prioritarios (MVP)
+
+### 🥇 **#1 - Identity** (Score: 8.3)
+**¿Por qué es crítico?**
+- **Bloquea todo**: Sin autenticación, no hay donadores ni receptores
+- **Base de todo**: Todos los módulos necesitan saber "quién es el usuario"
+- **Roles diferenciados**: Donador vs Receptor tienen flujos diferentes
+
+**Stack Técnico:**
+- **Autenticación**: [Better Auth](https://better-auth.com/) - Librería TypeScript-first con soporte nativo para Next.js 16
+  - Razones: Type-safe, plugin ecosystem, soporte para múltiples providers OAuth
+  - Integración nativa con Drizzle ORM
+  - Soporte para 2FA, magic links, y passkeys out-of-the-box
+- **ORM**: Drizzle ORM
+  - Razones: Sintaxis similar a SQL (fácil de aprender si conoces SQL)
+  - Mejor performance que Prisma (sin overhead de binarios)
+  - Ideal para serverless (cold start casi nulo)
+
+**Funcionalidades clave:**
+- ✅ Registro con roles (RF1)
+- ✅ Validación de datos (RF2)
+- ✅ Login/Logout (RF3)
+- ✅ Perfiles con estadísticas (RF4)
+- ✅ Restricciones por rol (RF5)
+- ✅ **NUEVO**: Validación de matrícula médica
+- ✅ **NUEVO**: Examen socioeconómico (pendiente definir preguntas)
+
+**Entidades de BD:**
+```typescript
+// Drizzle Schema
+users (id, email, password_hash, role, created_at)
+donor_profiles (user_id, postal_code, birth_date, medical_license, total_donations, recent_donations)
+recipient_profiles (user_id, birth_date, disabilities, allergies, socioeconomic_score, total_received)
+```
+
+**Esfuerzo estimado**: 3-5 días (con Better Auth configurado)
+
+---
+
+### 🥈 **#2 - Inventory** (Score: 5.0)
+**¿Por qué es crítico?**
+- **Corazón del negocio**: Sin publicaciones, no hay donaciones
+- **Validaciones complejas**: Caducidad, ocultamiento automático
+- **Búsqueda**: Algoritmo de distancia
+
+**Funcionalidades clave:**
+- ✅ Publicar medicamento (RF6, RF7)
+- ✅ Validar caducidad (RF8)
+- ✅ Ocultamiento automático <30 días (RF10)
+- ✅ Búsqueda por sustancia/gramaje (RF13)
+- ✅ Estados de publicación (RF9)
+
+**Entidades de BD:**
+```
+medications (id, donor_id, active_substance, dosage, quantity, brand, expiry_date, photo_url, lot, status, location, preferred_schedule, created_at)
+```
+
+**Esfuerzo estimado**: 4-6 días (con validaciones y búsqueda)
+
+---
+
+### 🥉 **#3 - Matchmaking** (Score: 4.0)
+**¿Por qué es importante?**
+- **Conecta donador-receptor**: El "match" es el momento clave
+- **Lógica de negocio**: Sugerencia por distancia, prevención de duplicidad
+
+**Funcionalidades clave:**
+- ✅ Solicitar medicamento (RF14)
+- ✅ Formulario de necesidad médica (RF15)
+- ✅ Ver solicitudes (RF11)
+- ✅ Seleccionar receptor (RF12)
+- ✅ Sugerencia por distancia
+- ✅ Prevención de duplicidad
+
+**Entidades de BD:**
+```
+requests (id, medication_id, recipient_id, medical_justification, status, created_at)
+donations (id, medication_id, donor_id, recipient_id, status, created_at)
+```
+
+**Esfuerzo estimado**: 3-4 días
+
+---
+
+## 🔄 Roadmap de Implementación Sugerido
+
+### **Fase 1: Fundamentos (Semana 1-2)** 🔴 CRÍTICO
+**Objetivo**: Usuarios pueden registrarse y publicar medicamentos
+
+| Tarea | Módulo | Días | Responsable | Notas Técnicas |
+|-------|--------|------|-------------|----------------|
+| Diseño de esquema de BD completo | Todos | 1 | Backend | Drizzle schema con sintaxis SQL-like |
+| Configurar Better Auth + Drizzle | Identity | 1 | Backend | Integración nativa, type-safe |
+| Implementar registro con roles | Identity | 1 | Backend | Donador/Receptor/Admin |
+| Crear perfiles de usuario | Identity | 1 | Fullstack | UI + backend |
+| CRUD de medicamentos | Inventory | 2 | Backend | Drizzle queries (similar a SQL) |
+| UI de publicación | Inventory | 2 | Frontend | Formulario con validación Zod |
+| Validación de caducidad | Inventory | 1 | Backend | Lógica de negocio + cron job |
+
+**Entregable**: Donador puede registrarse y publicar medicamentos
+
+**Stack confirmado**:
+- ✅ Better Auth para autenticación (type-safe, plugins para 2FA/OAuth)
+- ✅ Drizzle ORM para queries (sintaxis SQL-like, performance superior)
+
+---
+
+### **Fase 2: Matching (Semana 3-4)** 🟡 ALTA
+**Objetivo**: Receptores pueden buscar y solicitar medicamentos
+
+| Tarea | Módulo | Días | Responsable |
+|-------|--------|------|-------------|
+| Búsqueda por sustancia/gramaje | Inventory | 2 | Backend |
+| Algoritmo de distancia | Matchmaking | 2 | Backend |
+| Sistema de solicitudes | Matchmaking | 2 | Backend |
+| UI de búsqueda y solicitud | Matchmaking | 2 | Frontend |
+| Selección de receptor | Matchmaking | 1 | Fullstack |
+| Notificaciones por correo | Coordination | 2 | Backend |
+
+**Entregable**: Flujo completo de solicitud y aceptación
+
+---
+
+### **Fase 3: Coordinación y Cierre (Semana 5-6)** 🟢 MEDIA
+**Objetivo**: Generar orden de entrega y completar donación
+
+| Tarea | Módulo | Días | Responsable |
+|-------|--------|------|-------------|
+| Catálogo de lugares predefinidos | Coordination | 1 | Backend |
+| Generación de PDF | Coordination | 2 | Backend |
+| Subida de orden firmada | Resolution | 1 | Backend |
+| Validación de archivo | Resolution | 1 | Backend |
+| UI de coordinación | Coordination | 2 | Frontend |
+| Dashboard de donaciones | Governance | 2 | Frontend |
+
+**Entregable**: Donación completa de punta a punta
+
+---
+
+### **Fase 4: Administración (Semana 7+)** 🔵 BAJA
+**Objetivo**: Panel administrativo y reportes
+
+| Tarea | Módulo | Días | Responsable |
+|-------|--------|------|-------------|
+| Panel administrativo | Governance | 3 | Fullstack |
+| Sistema de reportes | Governance | 2 | Backend |
+| Gestión de usuarios | Governance | 2 | Fullstack |
+| Estadísticas y métricas | Governance | 2 | Backend |
+
+**Entregable**: Sistema completo con administración
+
+---
+
+## 🎯 Recomendaciones Estratégicas
+
+### 1. **Enfoque en MVP (Fases 1-3)**
+- Las Fases 1-3 cubren el **80% del valor de negocio**
+- Permiten validar el concepto con usuarios reales
+- Governance puede esperar hasta tener tracción
+
+### 2. **Implementación Incremental**
+- Cada fase entrega valor funcional
+- Permite feedback temprano
+- Reduce riesgo de sobre-ingeniería
+
+### 3. **Priorizar Backend Primero**
+- Identity y Inventory son **backend-heavy**
+- Frontend puede trabajar con mocks inicialmente
+- Fullstack integra al final de cada sprint
+
+### 4. **Elementos Pendientes de Definir**
+> [!WARNING]
+> Estos elementos bloquean la implementación completa:
+
+- **Preguntas del examen socioeconómico** (Identity)
+- **Lista de medicamentos controlados** (Inventory)
+- **Lugares predefinidos de entrega** (Coordination)
+
+**Acción**: Solicitar al cliente estas definiciones ANTES de Fase 1
+
+### 5. **Simplificaciones Posibles**
+Para acelerar el MVP:
+- **Examen socioeconómico**: Implementar después (no bloquea registro)
+- **Validación de médicos**: Implementar después (permitir todos los medicamentos inicialmente)
+- **Algoritmo de distancia**: Usar distancia lineal simple (no Google Maps API)
+
+---
+
+## 📋 Checklist de Cambios Arquitectónicos
+
+### Base de Datos
+- [ ] Crear entidad `users` con campo `role`
+- [ ] Crear entidad `donor_profiles` con `medical_license`
+- [ ] Crear entidad `recipient_profiles` con `socioeconomic_score`
+- [ ] Crear entidad `medications` con todos los campos (RF7)
+- [ ] Crear entidad `requests` para solicitudes
+- [ ] Crear entidad `donations` para tracking
+- [ ] Crear entidad `delivery_locations` para lugares predefinidos
+- [ ] Crear entidad `reports` para denuncias
+- [ ] Crear entidad `delivery_orders` para PDFs generados
+
+### Módulos a Modificar
+- [ ] **Coordination**: Eliminar referencias a "chat temporal"
+- [ ] **Coordination**: Agregar generación de PDF
+- [ ] **Resolution**: Cambiar "firma digital" por "subida de archivo"
+- [ ] **Identity**: Agregar validación de matrícula médica
+- [ ] **Identity**: Agregar examen socioeconómico (pendiente preguntas)
+
+### Nuevas Funcionalidades
+- [ ] Sistema de notificaciones por correo (4 eventos)
+- [ ] Validación automática de caducidad
+- [ ] Ocultamiento automático <30 días
+- [ ] Algoritmo de sugerencia por distancia
+- [ ] Prevención de duplicidad en donaciones activas
+- [ ] Generación de PDF con QR/ID único
+- [ ] Sistema de reportes/denuncias
+
+---
+
+## 🎓 Conclusión
+
+### ✅ Buenas Noticias:
+- La arquitectura actual está **bien diseñada** y alineada con los requerimientos
+- No hay funcionalidades implementadas que deban **eliminarse** (solo ajustar conceptos)
+- El stack técnico es **adecuado** para todos los requerimientos
+
+### ⚠️ Ajustes Necesarios:
+- Eliminar concepto de "chat" del módulo Coordination
+- Cambiar "firma digital" por "subida de archivo físico firmado"
+- Agregar entidades nuevas (lugares, reportes, examen socioeconómico)
+
+### 🚀 Siguiente Paso:
+**Implementar Fase 1** (Identity + Inventory) para tener un MVP funcional en 2 semanas.
+
+---
+
+**¿Preguntas para el cliente?**
+1. ¿Cuáles son las preguntas del examen socioeconómico?
+2. ¿Cuál es la lista de medicamentos controlados?
+3. ¿Cuáles son los lugares predefinidos de entrega iniciales?
+4. ¿Hay algún servicio de correo preferido? (SendGrid, AWS SES, etc.)

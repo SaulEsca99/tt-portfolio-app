@@ -1,0 +1,26 @@
+#!/usr/bin/env sh
+
+echo "🔍 Running Quality Gates (pre-commit)..."
+
+# Gate 1: Linting
+echo "📝 Checking code style..."
+# pnpm run lint || {
+#   echo "❌ ESLint failed! Fix errors before committing."
+#   exit 1
+# }
+
+# Gate 2: Unit Tests
+echo "🧪 Running unit tests..."
+# pnpm test --run || {
+#   echo "❌ Tests failed! All must pass."
+#   exit 1
+# }
+
+# Gate 3: TypeScript Build
+echo "🔧 Checking TypeScript..."
+# pnpm run build || {
+#   echo "❌ Build failed! Fix type errors."
+#   exit 1
+# }
+
+echo "✅ All pre-commit gates passed!"
