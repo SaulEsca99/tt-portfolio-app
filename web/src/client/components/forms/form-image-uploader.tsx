@@ -1,7 +1,7 @@
 "use client";
 
-// ImageKit/upload-auth ya no se usa en este proyecto.
-// Este componente es un placeholder para futura carga de avatar.
-export function FormImageUploader() {
+// ImageKit ya no se usa en este proyecto.
+// Stub para mantener compatibilidad con form-context.ts
+export function FormImageKitUploader() {
   return null;
 }
