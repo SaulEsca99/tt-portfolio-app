@@ -2,7 +2,7 @@
 // Llama al ml-service vía ml-gateway. NUNCA expone ML_SERVICE_API_KEY al cliente.
 
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/server/modules/identity/infrastructure/auth-provider/auth.config";
+import { auth } from "@/app/lib/auth";
 import { mlGateway } from "@/server/modules/ml-gateway/ml-gateway.client";
 import { z } from "zod";
 

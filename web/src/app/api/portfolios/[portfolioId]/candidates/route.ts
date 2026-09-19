@@ -3,7 +3,7 @@
 // Primero verifica que el activo exista en la BD; si no, llama al ml-service para descargarlo.
 
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/server/modules/identity/infrastructure/auth-provider/auth.config";
+import { auth } from "@/app/lib/auth";
 import { db } from "@/server/db";
 import {
   portfolioTable,

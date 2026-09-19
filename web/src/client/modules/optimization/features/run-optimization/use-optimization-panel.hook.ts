@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { useRunOptimization, useRunBacktest } from "../hooks/use-optimization.hook";
+import { useRunOptimization, useRunBacktest } from "../../hooks/use-optimization.hook";
 import type { Algorithm, OptimizationResult, BacktestResult } from "@/client/types/domain.types";
 
 /** Estado y lógica del panel de optimización completo (RF-04, RF-05, RF-07, RF-08). */

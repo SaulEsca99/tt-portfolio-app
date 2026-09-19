@@ -1,7 +1,7 @@
 // API route: POST /api/backtest
 
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/server/modules/identity/infrastructure/auth-provider/auth.config";
+import { auth } from "@/app/lib/auth";
 import { mlGateway } from "@/server/modules/ml-gateway/ml-gateway.client";
 import { z } from "zod";
 
