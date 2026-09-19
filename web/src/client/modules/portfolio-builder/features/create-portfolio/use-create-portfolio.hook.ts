@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { useCreatePortfolio } from "../hooks/use-portfolios.hook";
+import { useCreatePortfolio } from "../../hooks/use-portfolios.hook";
 
 const schema = z.object({
   name: z.string().min(1, "El nombre es requerido").max(100),
@@ -25,7 +25,7 @@ export function useCreatePortfolioForm() {
   const { mutateAsync, isPending } = useCreatePortfolio();
 
   const form = useForm<FormValues>({
-    resolver: zodResolver(schema),
+    resolver: zodResolver(schema) as any,
     defaultValues: {
       name: "",
       riskAversionLambda: 1,
@@ -43,5 +43,5 @@ export function useCreatePortfolioForm() {
     }
   }
 
-  return { form, onSubmit: form.handleSubmit(onSubmit), isPending };
+  return { form, onSubmit: form.handleSubmit(onSubmit as any), isPending };
 }

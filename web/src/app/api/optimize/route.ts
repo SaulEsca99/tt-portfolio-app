@@ -9,7 +9,7 @@ import { z } from "zod";
 const OptimizeSchema = z.object({
   portfolioId: z.string().uuid(),
   algorithm: z.enum(["ga", "pso", "de"]).default("ga"),
-  params: z.record(z.unknown()).optional(),
+  params: z.record(z.string(), z.unknown()).optional(),
 });
 
 export async function POST(req: NextRequest) {
