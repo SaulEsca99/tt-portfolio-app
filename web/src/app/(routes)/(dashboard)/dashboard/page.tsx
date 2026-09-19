@@ -16,12 +16,22 @@ export default function DashboardPage() {
   const [query, setQuery] = useState('');
   const filtered = useMemo(() => holdings.filter((item) => `${item.symbol} ${item.name}`.toLowerCase().includes(query.toLowerCase())), [query]);
 
+  const { greeting, formattedDate } = useMemo(() => {
+    const now = new Date();
+    const hour = now.getHours();
+    let greet = 'Good evening';
+    if (hour >= 5 && hour < 12) greet = 'Good morning';
+    else if (hour >= 12 && hour < 18) greet = 'Good afternoon';
+    const date = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    return { greeting: greet, formattedDate: date };
+  }, []);
+
   return (
     <>
       <div className="mb-7 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
-          <p className="mb-2 text-sm text-muted-foreground">Monday, September 15, 2026</p>
-          <h2 className="text-3xl font-semibold tracking-tight">Good morning</h2>
+          <p className="mb-2 text-sm text-muted-foreground">{formattedDate}</p>
+          <h2 className="text-3xl font-semibold tracking-tight">{greeting}</h2>
           <p className="mt-1 text-sm text-muted-foreground">Here&apos;s how your portfolio is performing today.</p>
         </div>
         <Button asChild>
