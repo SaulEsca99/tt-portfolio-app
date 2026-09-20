@@ -2,15 +2,15 @@ import { PUBLIC_ROUTES } from "@/client/config/routes";
 import { cn } from "@client/lib/utils";
 import { cva, type VariantProps } from "class-variance-authority";
 import Link from "next/link";
-import { LineChartIcon } from "lucide-react";
+import Image from "next/image";
 import * as React from "react";
 
-const logoVariants = cva("relative inline-flex items-center gap-2", {
+const logoVariants = cva("relative inline-flex items-center", {
   variants: {
     size: {
-      sm: "text-lg",
-      md: "text-xl",
-      lg: "text-2xl",
+      sm: "h-8",
+      md: "h-10",
+      lg: "h-12",
     },
   },
   defaultVariants: {
@@ -20,21 +20,38 @@ const logoVariants = cva("relative inline-flex items-center gap-2", {
 
 export interface LogoProps
   extends React.HTMLAttributes<HTMLAnchorElement>,
-    VariantProps<typeof logoVariants> {}
+    VariantProps<typeof logoVariants> {
+  iconOnly?: boolean;
+}
 
-function Logo({ className, size, ...props }: LogoProps) {
+function Logo({ className, size, iconOnly = false, ...props }: LogoProps) {
   return (
     <Link
       href={PUBLIC_ROUTES.home}
-      className={cn(logoVariants({ size }), "font-bold text-primary", className)}
+      className={cn(logoVariants({ size }), className)}
       {...props}
     >
-      <div className="flex items-center justify-center bg-primary text-primary-foreground rounded-md p-1.5">
-        <LineChartIcon className="w-5 h-5 sm:w-6 sm:h-6" />
-      </div>
-      <span className="tracking-tight">PortfolioApp</span>
+      {iconOnly ? (
+        <Image
+          src="/bionvest-icon.png"
+          alt="Bionvest"
+          width={40}
+          height={40}
+          className="h-full w-auto object-contain"
+        />
+      ) : (
+        <Image
+          src="/bionvest-logo.png"
+          alt="Bionvest – Bio-Inspired Investment"
+          width={180}
+          height={48}
+          className="h-full w-auto object-contain"
+          priority
+        />
+      )}
     </Link>
   );
 }
 
 export { Logo, logoVariants };
+

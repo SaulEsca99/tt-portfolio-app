@@ -3,11 +3,11 @@
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { cn } from "@/client/lib/utils";
+import { Logo } from "@/client/components/branding/logo";
 import {
   LayoutDashboardIcon,
   BriefcaseBusinessIcon,
   Settings2Icon,
-  LineChartIcon,
   BarChart3Icon,
   BotIcon,
 } from "lucide-react";
@@ -27,11 +27,8 @@ export function DashboardSidebar() {
 
   return (
     <aside className="hidden lg:flex w-64 shrink-0 flex-col border-r bg-sidebar px-4 py-6 gap-1">
-      <div className="mb-6 px-2 flex items-center gap-2.5">
-        <div className="grid size-8 place-items-center rounded-lg bg-primary text-primary-foreground">
-          <LineChartIcon className="size-4" />
-        </div>
-        <span className="text-lg font-semibold tracking-tight">PortfolioApp</span>
+      <div className="mb-6 px-2">
+        <Logo size="md" />
       </div>
       
       <nav className="flex flex-col gap-1">
