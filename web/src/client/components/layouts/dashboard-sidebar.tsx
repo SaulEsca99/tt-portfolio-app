@@ -8,6 +8,7 @@ import {
   LayoutDashboardIcon,
   BriefcaseBusinessIcon,
   Settings2Icon,
+  LineChartIcon,
   BarChart3Icon,
   BotIcon,
 } from "lucide-react";
