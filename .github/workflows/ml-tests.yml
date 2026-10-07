@@ -1,0 +1,26 @@
+name: Pruebas ml-service
+
+on:
+  push:
+    paths: ["ml-service/**"]
+  pull_request:
+    paths: ["ml-service/**"]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ml-service
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            ml-service/requirements.txt
+            ml-service/requirements-dev.txt
+      - run: pip install torch --index-url https://download.pytorch.org/whl/cpu
+      - run: pip install -r requirements.txt -r requirements-dev.txt
+      - run: python -m pytest tests -q

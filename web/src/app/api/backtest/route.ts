@@ -3,6 +3,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/app/lib/auth";
 import { mlGateway } from "@/server/modules/ml-gateway/ml-gateway.client";
+import { db } from "@/server/db";
+import { optimizationRunTable, portfolioTable } from "@/server/db/domain.schema";
+import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 
 const BacktestSchema = z.object({
@@ -23,6 +26,19 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
+
+  // Verificar que la corrida pertenece a una cartera del usuario autenticado
+  const [owned] = await db
+    .select({ id: optimizationRunTable.id })
+    .from(optimizationRunTable)
+    .innerJoin(portfolioTable, eq(optimizationRunTable.portfolioId, portfolioTable.id))
+    .where(
+      and(
+        eq(optimizationRunTable.id, parsed.data.optimizationRunId),
+        eq(portfolioTable.userId, session.user.id),
+      ),
+    );
+  if (!owned) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   try {
     const result = await mlGateway.backtest(

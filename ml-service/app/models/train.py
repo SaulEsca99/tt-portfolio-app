@@ -1,14 +1,15 @@
 """
-Job de reentrenamiento mensual del modelo LSTM — Render Cron Job.
+Job de reentrenamiento mensual del modelo LSTM.
 
-Estrategia (ver §4.2 del plan):
-  - Corre el día 1 de cada mes (schedule: "0 0 1 * *")
+Estrategia:
+  - Corre el día 1 de cada mes (GitHub Actions programado o Render Cron Job)
   - Usa una ventana móvil de LSTM_TRAINING_WINDOW_MONTHS meses de price_history
-  - Guarda el nuevo modelo en la tabla lstm_model con version incremental
-  - El servicio web usa automáticamente el modelo con trained_at más reciente
+  - Entrena FUERA del servicio web (requiere torch) y guarda los pesos en la BD
+    (lstm_model.weights_base64); el servicio web solo hace inferencia con NumPy
+  - El servicio usa automáticamente el modelo con trained_at más reciente
 
-Se ejecuta vía Render Cron Job:
-  startCommand: python -m app.models.train
+Ejecución:
+  python -m app.models.train
 """
 from __future__ import annotations
 
@@ -16,67 +17,59 @@ import asyncio
 import logging
 import uuid
 from datetime import date, datetime, timezone
-from dateutil.relativedelta import relativedelta  # type: ignore[import]
 
+from dateutil.relativedelta import relativedelta  # type: ignore[import]
 from sqlalchemy import select
 
 from app.core.config import settings
-from app.db.models import Asset, LstmModel, PriceHistory
+from app.db.models import Asset, LstmModel
 from app.db.session import AsyncSessionLocal
+from app.models.lstm_model import LstmConfig, train_model
+from app.services.market_data import load_price_matrix
 
 logging.basicConfig(level="INFO", format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
 
+MIN_ROWS_PER_ASSET = 150  # activos con menos historial se excluyen del entrenamiento
 
-async def retrain() -> None:
-    """Punto de entrada del cron job mensual de reentrenamiento."""
-    logger.info("Starting monthly LSTM retraining...")
 
-    window_start = date.today() - relativedelta(months=settings.LSTM_TRAINING_WINDOW_MONTHS)
+async def retrain(config: LstmConfig | None = None) -> str:
+    """Entrena con los datos de la BD, guarda el modelo y devuelve su versión."""
     window_end = date.today()
+    window_start = window_end - relativedelta(months=settings.LSTM_TRAINING_WINDOW_MONTHS)
+    logger.info("Starting LSTM retraining: %s → %s", window_start, window_end)
 
     async with AsyncSessionLocal() as db:
-        # Obtener todos los activos con datos suficientes
-        result = await db.execute(select(Asset))
-        assets = result.scalars().all()
-
-        logger.info(
-            "Training window: %s → %s | Assets: %d",
-            window_start,
-            window_end,
-            len(assets),
+        assets = (await db.execute(select(Asset))).scalars().all()
+        prices = await load_price_matrix(
+            db, [a.id for a in assets], start=window_start, end=window_end, align=False
         )
+        prices = prices.loc[:, prices.count() >= MIN_ROWS_PER_ASSET]
+        if prices.shape[1] == 0:
+            raise RuntimeError("Ningún activo tiene historial suficiente para entrenar.")
+        logger.info("Assets in training: %d", prices.shape[1])
 
-        # TODO: implementar el entrenamiento real del LSTM aquí.
-        # El flujo esperado:
-        #   1. Cargar price_history de todos los activos en la ventana
-        #   2. Preprocesar (normalización, creación de secuencias)
-        #   3. Entrenar el modelo LSTM (TensorFlow o PyTorch)
-        #   4. Evaluar métricas (MSE, MAE, R²) en el conjunto de validación
-        #   5. Guardar los pesos del modelo (archivo .keras / .pt)
-        #   6. Insertar una nueva fila en lstm_model (ver abajo)
+        predictor, metrics = await asyncio.to_thread(train_model, prices, config)
+        metrics["assets"] = list(prices.columns)
+        logger.info("Validation metrics: %s", {k: v for k, v in metrics.items() if k != "assets"})
 
-        # Por ahora: registra un placeholder para validar el flujo de la BD
-        version = f"v0.{window_end.strftime('%Y%m')}"
-        new_model = LstmModel(
-            id=uuid.uuid4(),
-            version=version,
-            hyperparameters={
-                "sequence_length": 60,
-                "hidden_units": 64,
-                "num_layers": 2,
-                "dropout": 0.2,
-                "horizon_days": 21,
-            },
-            metrics={"status": "placeholder — entrenamiento real pendiente"},
-            training_window_start=window_start,
-            training_window_end=window_end,
-            trained_at=datetime.now(timezone.utc),
+        version = f"v1.{datetime.now(timezone.utc):%Y%m%d%H%M}"
+        db.add(
+            LstmModel(
+                id=uuid.uuid4(),
+                version=version,
+                hyperparameters=predictor.hyperparameters(),
+                metrics=metrics,
+                training_window_start=window_start,
+                training_window_end=window_end,
+                weights_base64=predictor.to_base64(),
+                trained_at=datetime.now(timezone.utc),
+            )
         )
-        db.add(new_model)
         await db.commit()
 
-    logger.info("Retraining job finished. Model version: %s", version)
+    logger.info("Retraining finished. Model version: %s", version)
+    return version
 
 
 if __name__ == "__main__":

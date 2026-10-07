@@ -122,6 +122,8 @@ export const lstmModelTable = pgTable("lstm_model", {
   metrics: jsonb("metrics"),
   trainingWindowStart: date("training_window_start"),
   trainingWindowEnd: date("training_window_end"),
+  // Pesos del LSTM + escaladores (npz comprimido en base64); lo escribe ml-service
+  weightsBase64: text("weights_base64"),
   trainedAt: timestamp("trained_at", { withTimezone: true }).notNull(),
 });
 

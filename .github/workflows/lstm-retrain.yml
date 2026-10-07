@@ -1,0 +1,28 @@
+name: Reentrenamiento mensual del LSTM
+
+on:
+  schedule:
+    - cron: "0 6 1 * *"     # día 1 de cada mes, 06:00 UTC
+  workflow_dispatch:
+
+jobs:
+  retrain:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    defaults:
+      run:
+        working-directory: ml-service
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: ml-service/requirements.txt
+      # Rueda CPU de torch (la de PyPI incluye CUDA y pesa varios GB)
+      - run: pip install torch --index-url https://download.pytorch.org/whl/cpu
+      - run: pip install -r requirements.txt
+      - run: python -m app.models.train
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          ML_SERVICE_API_KEY: ${{ secrets.ML_SERVICE_API_KEY }}

@@ -15,7 +15,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import uuid
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 
 from sqlalchemy import func, select
 
@@ -56,11 +56,13 @@ async def _update_asset(db, asset: Asset) -> None:
         logger.debug("Asset %s is up to date (last: %s)", asset.ticker, last_date)
         return
 
-    start = last_date.replace(day=last_date.day + 1) if last_date else today.replace(year=today.year - 5)
+    # Bug fix: usar timedelta en vez de replace(day=...) que falla a fin de mes
+    start = (last_date + timedelta(days=1)) if last_date else today.replace(year=today.year - 5)
     logger.info("Fetching %s from %s to %s", asset.ticker, start, today)
 
     # Intento primario: yfinance
     df = fetch_yfinance.fetch_prices(asset.ticker, start=start, end=today)
+    used_source = "yfinance"
 
     # Fallback: Alpha Vantage
     if df.empty:
@@ -68,13 +70,14 @@ async def _update_asset(db, asset: Asset) -> None:
         df = fetch_alpha_vantage.fetch_prices(asset.ticker, compact=True)
         if not df.empty:
             df = df[df["date"] >= start]
+            used_source = "alpha_vantage"
 
     if df.empty:
         logger.error("No data available for %s — skipping", asset.ticker)
         return
 
     now = datetime.now(timezone.utc)
-    source = "yfinance" if not df.empty else "alpha_vantage"
+    source = used_source
 
     rows = [
         PriceHistory(

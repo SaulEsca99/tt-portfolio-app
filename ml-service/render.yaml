@@ -22,36 +22,9 @@ services:
         value: INFO
 
   # =========================================================
-  # 2. Cron Job diario — Actualización incremental de precios
-  #    Se ejecuta a las 22:00 CDMX (= 04:00 UTC del día siguiente)
-  #    después del cierre de NY (16:00 ET = 21:00 CDMX)
+  # Los jobs periódicos (precios diarios y reentrenamiento mensual del LSTM)
+  # corren en GitHub Actions (gratis) en vez de Render Cron Jobs (de pago):
+  #   .github/workflows/price-update.yml
+  #   .github/workflows/lstm-retrain.yml
+  # Secrets requeridos en GitHub: DATABASE_URL, ML_SERVICE_API_KEY, ALPHA_VANTAGE_API_KEY
   # =========================================================
-  - type: cron
-    name: tt-daily-price-update
-    runtime: python
-    rootDir: ml-service
-    buildCommand: pip install -r requirements.txt
-    schedule: "0 4 * * 2-6"  # Martes–Sábado 04:00 UTC (lunes–viernes NY)
-    startCommand: python -m app.data.price_updater
-    plan: free
-    envVars:
-      - key: DATABASE_URL
-        sync: false
-      - key: ALPHA_VANTAGE_API_KEY
-        sync: false
-
-  # =========================================================
-  # 3. Cron Job mensual — Reentrenamiento del modelo LSTM
-  #    Día 1 de cada mes, madrugada (00:00 UTC)
-  # =========================================================
-  - type: cron
-    name: tt-monthly-lstm-retrain
-    runtime: python
-    rootDir: ml-service
-    buildCommand: pip install -r requirements.txt
-    schedule: "0 0 1 * *"  # Día 1 de cada mes, 00:00 UTC
-    startCommand: python -m app.models.train
-    plan: free
-    envVars:
-      - key: DATABASE_URL
-        sync: false

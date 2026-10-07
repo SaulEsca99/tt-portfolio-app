@@ -39,7 +39,8 @@ class Base(DeclarativeBase):
 class User(Base):
     __tablename__ = "user"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
+    # Better Auth genera IDs de texto (nanoid), NO UUID — usar String.
+    id: Mapped[str] = mapped_column(String, primary_key=True)
     email: Mapped[str] = mapped_column(String, unique=True)
     name: Mapped[str | None] = mapped_column(String)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
@@ -91,7 +92,7 @@ class Portfolio(Base):
     __tablename__ = "portfolio"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
-    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("user.id"))
+    user_id: Mapped[str] = mapped_column(String, ForeignKey("user.id"))
     name: Mapped[str] = mapped_column(String)
     capital: Mapped[Decimal | None] = mapped_column(Numeric(18, 2))
     risk_aversion_lambda: Mapped[Decimal | None] = mapped_column(Numeric(8, 4))
@@ -159,6 +160,8 @@ class LstmModel(Base):
     metrics: Mapped[dict | None] = mapped_column(JSONB)  # MSE, MAE, etc.
     training_window_start: Mapped[date | None] = mapped_column(Date)
     training_window_end: Mapped[date | None] = mapped_column(Date)
+    # Pesos + escaladores serializados (npz comprimido en base64). Inferencia en NumPy.
+    weights_base64: Mapped[str | None] = mapped_column(Text)
     trained_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
     predictions: Mapped[list["LstmPrediction"]] = relationship(back_populates="model")
