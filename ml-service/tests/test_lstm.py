@@ -75,7 +75,7 @@ def test_numpy_inference_matches_torch(layers):
 def test_train_roundtrip_and_metrics():
     cfg = LstmConfig(hidden_units=8, epochs=3, batch_size=64)
     predictor, metrics = train_model(_matrix(), cfg)
-    for k in ("val_mse", "val_mae", "val_r2", "baseline_mse", "directional_accuracy", "n_train", "n_val"):
+    for k in ("val_mse", "val_mae", "val_r2", "baseline_mse", "directional_accuracy", "rank_ic", "n_train", "n_val"):
         assert k in metrics and np.isfinite(metrics[k])
     blob = predictor.to_base64()
     again = LstmPredictor.from_base64(blob, predictor.hyperparameters())

@@ -56,8 +56,8 @@ async def _update_asset(db, asset: Asset) -> None:
         logger.debug("Asset %s is up to date (last: %s)", asset.ticker, last_date)
         return
 
-    # Bug fix: usar timedelta en vez de replace(day=...) que falla a fin de mes
-    start = (last_date + timedelta(days=1)) if last_date else today.replace(year=today.year - 5)
+    # timedelta en vez de replace(year=...): replace falla el 29 de febrero
+    start = (last_date + timedelta(days=1)) if last_date else today - timedelta(days=365 * 5)
     logger.info("Fetching %s from %s to %s", asset.ticker, start, today)
 
     # Intento primario: yfinance

@@ -95,6 +95,13 @@ def make_sequences(
 # Inferencia en NumPy
 # ---------------------------------------------------------------------------
 
+def _spearman(a: np.ndarray, b: np.ndarray) -> float:
+    if len(a) < 3 or np.std(a) < 1e-12 or np.std(b) < 1e-12:
+        return 0.0
+    ra, rb = pd.Series(a).rank().to_numpy(), pd.Series(b).rank().to_numpy()
+    return float(np.corrcoef(ra, rb)[0, 1])
+
+
 def _sigmoid(x: np.ndarray) -> np.ndarray:
     return 1.0 / (1.0 + np.exp(-x))
 
@@ -262,6 +269,9 @@ def train_model(
         "baseline_mse": baseline_mse,
         "beats_baseline": bool((err**2).mean() < baseline_mse),
         "directional_accuracy": float((np.sign(pred) == np.sign(yva)).mean()),
+        # IC por rango (Spearman) entre predicción y retorno real: mide si el ORDEN de los
+        # activos es útil, que es lo que el optimizador aprovecha de μ.
+        "rank_ic": _spearman(pred, yva),
         "n_train": int(len(tx)),
         "n_val": int(len(vx)),
     }
