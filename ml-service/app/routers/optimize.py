@@ -26,7 +26,7 @@ from app.db.models import (
 )
 from app.db.session import get_db
 from app.optimization.portfolio_math import historical_mean_return, ledoit_wolf_cov
-from app.optimization.runner import run_algorithm
+from app.optimization.runner import ParamError, run_algorithm, validate_params
 from app.services.lstm_service import latest_predictor, lstm_expected_returns
 from app.services.market_data import MIN_OBSERVATIONS, load_price_matrix, prepare_universe
 
@@ -63,6 +63,8 @@ class OptimizeResponse(CamelModel):
     # Activos candidatos que no entraron a la optimización, con el motivo
     excluded: dict[str, str] = Field(default_factory=dict)
     n_observations: int = 0
+    # Si el objetivo solicitado no se pudo usar (p. ej. Sharpe con μ ≤ 0), motivo del cambio
+    objective_fallback: str | None = None
 
 
 @router.post("", response_model=OptimizeResponse)
@@ -83,6 +85,10 @@ async def run_optimization(
         portfolio_id = uuid.UUID(body.portfolio_id)
     except ValueError:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "portfolio_id inválido.")
+    try:
+        body.params = validate_params(body.algorithm, body.params)   # antes de tocar la BD
+    except ParamError as exc:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(exc))
 
     portfolio = (
         await db.execute(select(Portfolio).where(Portfolio.id == portfolio_id))
@@ -196,12 +202,13 @@ async def run_optimization(
     run.status = "done"
     run.completed_at = datetime.now(timezone.utc)
     run.params = {**run.params, "mu_source": mu_source, "max_assets": max_assets,
-                  "excluded": excluded, "n_observations": int(len(prices))}
+                  "excluded": excluded, "n_observations": int(len(prices)),
+                  "objective_effective": res.objective, "objective_fallback": res.objective_fallback}
 
     return OptimizeResponse(
         optimization_run_id=str(run.id),
         algorithm=body.algorithm,
-        objective=body.objective,
+        objective=res.objective,
         mu_source=mu_source,
         weights=[
             WeightResult(ticker=t, weight=w)
@@ -214,4 +221,5 @@ async def run_optimization(
         convergence_history=res.convergence_history,
         excluded=excluded,
         n_observations=int(len(prices)),
+        objective_fallback=res.objective_fallback,
     )

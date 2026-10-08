@@ -22,6 +22,8 @@ class OptimizationResult:
     expected_risk: float
     sharpe_ratio: float
     convergence_history: list[float] = field(default_factory=list)
+    objective: str = "sharpe"                    # objetivo realmente optimizado
+    objective_fallback: str | None = None        # motivo si difiere del solicitado
 
 
 def prepare_bounds(

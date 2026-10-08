@@ -25,7 +25,9 @@ __all__ = ["PSOConfig", "OptimizationResult", "optimize"]
 class PSOConfig:
     num_particles: int = 100
     max_iterations: int = 200
-    inertia_weight: float = 0.7       # w
+    inertia_weight: float = 0.9       # w inicial; decae linealmente hasta inertia_end
+    inertia_end: float = 0.4          # w final (explotación)
+    stagnation_limit: int = 25        # iteraciones sin mejora antes de reinicializar el peor 50 %
     cognitive_coeff: float = 1.5      # c1 (pbest)
     social_coeff: float = 1.5         # c2 (gbest)
     max_velocity: float = 0.3         # tope de |v| por dimensión
@@ -68,11 +70,15 @@ def optimize(
     gbest, gbest_score = pos[g].copy(), float(scores[g])
     history: list[float] = []
 
+    stale = 0
     for it in range(config.max_iterations):
+        frac = it / max(config.max_iterations - 1, 1)
+        w_t = config.inertia_weight + (min(config.inertia_end, config.inertia_weight)
+                                       - config.inertia_weight) * frac
         r1 = rng.random((m, n))
         r2 = rng.random((m, n))
         vel = (
-            config.inertia_weight * vel
+            w_t * vel
             + config.cognitive_coeff * r1 * (pbest - pos)
             + config.social_coeff * r2 * (gbest - pos)
         )
@@ -85,8 +91,19 @@ def optimize(
         pbest_score[improved] = scores[improved]
 
         g = int(np.argmin(pbest_score))
-        if pbest_score[g] < gbest_score:
+        if pbest_score[g] < gbest_score - 1e-12:
             gbest, gbest_score = pbest[g].copy(), float(pbest_score[g])
+            stale = 0
+        else:
+            stale += 1
+        if stale >= config.stagnation_limit and it < config.max_iterations - 1:
+            # reinicia la mitad peor del enjambre para escapar del estancamiento
+            worst = np.argsort(pbest_score)[m // 2:]
+            for k in worst:
+                pos[k] = fix(rng.dirichlet(np.ones(n)))
+                vel[k] = rng.uniform(-0.05, 0.05, n)
+                pbest[k], pbest_score[k] = pos[k].copy(), fit(pos[k])
+            stale = 0
 
         history.append(gbest_score if objective == "min_variance" else -gbest_score)
 

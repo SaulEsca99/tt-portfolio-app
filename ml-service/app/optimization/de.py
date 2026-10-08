@@ -23,7 +23,7 @@ __all__ = ["DEConfig", "OptimizationResult", "optimize"]
 @dataclass
 class DEConfig:
     population_size: int = 100
-    max_generations: int = 200
+    max_generations: int | None = None   # None = automático: max(200, 12·N)
     mutation_factor: float = 0.8     # F — escala la diferencia entre individuos
     crossover_prob: float = 0.7      # CR — probabilidad de recombinación
     strategy: str = "rand/1/bin"     # estrategia clásica de DE
@@ -60,11 +60,12 @@ def optimize(
         return repair(w, w_min, w_max, max_assets)
 
     np_ = max(config.population_size, 4)
+    generations = config.max_generations or max(200, 12 * n)
     pop = np.array([fix(rng.dirichlet(np.ones(n))) for _ in range(np_)])
     scores = np.array([fit(w) for w in pop])
     history: list[float] = []
 
-    for gen in range(config.max_generations):
+    for gen in range(generations):
         for i in range(np_):
             candidates = [j for j in range(np_) if j != i]
             a, b, c = pop[rng.choice(candidates, size=3, replace=False)]

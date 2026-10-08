@@ -138,6 +138,24 @@ def fitness(weights: np.ndarray, mu: np.ndarray, sigma: np.ndarray,
         raise ValueError(f"objective desconocido: {objective!r}. Usa 'sharpe', 'min_variance' o 'utility'.")
 
 
+def max_feasible_return(mu: np.ndarray, w_min: np.ndarray, w_max: np.ndarray) -> float:
+    """
+    Mayor retorno esperado alcanzable con sum(w)=1 y w_min <= w <= w_max
+    (programa lineal resuelto de forma voraz; ignora la cardinalidad, así que es
+    una cota superior válida).
+    """
+    mu = np.asarray(mu, dtype=float)
+    w = np.asarray(w_min, dtype=float).copy()
+    remaining = 1.0 - w.sum()
+    for i in np.argsort(-mu):
+        if remaining <= 1e-15:
+            break
+        add = min(float(w_max[i] - w[i]), remaining)
+        w[i] += add
+        remaining -= add
+    return float(w @ mu)
+
+
 # ---------------------------------------------------------------------------
 # Reparación de soluciones (proyección al simplex con restricciones)
 # ---------------------------------------------------------------------------
