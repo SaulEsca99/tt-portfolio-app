@@ -13,7 +13,11 @@ const BacktestSchema = z.object({
   benchmark: z.string().default("equal_weight"),
   startDate: z.string().date().optional(),
   endDate: z.string().date().optional(),
+  costBps: z.number().min(0).max(100).default(0),
 });
+
+// El walk-forward re-optimiza en cada ventana; Vercel corta a los 10 s por defecto en Hobby.
+export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
   const session = await auth.api.getSession({ headers: req.headers });
@@ -46,6 +50,7 @@ export async function POST(req: NextRequest) {
       parsed.data.benchmark,
       parsed.data.startDate,
       parsed.data.endDate,
+      parsed.data.costBps,
     );
     return NextResponse.json(result);
   } catch (err: unknown) {

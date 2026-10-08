@@ -107,3 +107,50 @@ async def test_backtest_unknown_run_404(client):
     import uuid
     r = await client.post("/backtest", json={"optimization_run_id": str(uuid.uuid4())})
     assert r.status_code == 404
+
+
+# ------------------------- C5: costos y rotación --------------------------
+
+def test_costs_reduce_return_by_turnover():
+    prices = _prices()
+    free = run_walk_forward(prices, equal_weight_strategy)
+    costly = run_walk_forward(prices, equal_weight_strategy, cost_bps=50)
+    # 1/N con pesos constantes: solo la compra inicial (rotación 1.0) cuesta 50 pbs
+    assert free.avg_turnover == pytest.approx(1 / len(free.windows))
+    assert costly.windows[0]["turnover"] == pytest.approx(1.0)
+    assert all(w["turnover"] == pytest.approx(0.0) for w in costly.windows[1:])
+    assert costly.cumulative_return < free.cumulative_return
+    assert (1 + free.cumulative_return) / (1 + costly.cumulative_return) == pytest.approx(1.005, rel=1e-3)
+
+
+def test_turnover_of_alternating_strategy():
+    prices = _prices()
+    flip = {"i": 0}
+
+    def alternating(train):
+        flip["i"] += 1
+        return np.array([1.0, 0, 0, 0]) if flip["i"] % 2 else np.array([0, 1.0, 0, 0])
+
+    m = run_walk_forward(prices, alternating, cost_bps=10)
+    assert [w["turnover"] for w in m.windows][:3] == pytest.approx([1.0, 2.0, 2.0])
+
+
+async def test_backtest_endpoint_costs_and_light_budget(client):
+    opt = await client.post("/optimize", json={
+        "portfolio_id": client.portfolio_id, "algorithm": "ga", "params": FAST})
+    rid = opt.json()["optimizationRunId"]
+    a = (await client.post("/backtest", json={"optimization_run_id": rid})).json()
+    b = (await client.post("/backtest", json={"optimization_run_id": rid, "cost_bps": 100})).json()
+    assert a["costBps"] == 0 and b["costBps"] == 100
+    assert b["cumulativeReturn"] < a["cumulativeReturn"]
+    assert a["avgTurnover"] > 0 and all("turnover" in w for w in a["windows"])
+    assert a["paramsUsed"]["population_size"] == 20   # respeta lo explícito
+    bad = await client.post("/backtest", json={"optimization_run_id": rid, "cost_bps": 500})
+    assert bad.status_code == 422
+
+
+def test_light_params_defaults_and_overrides():
+    from app.routers.backtest import _light_params
+    assert _light_params("de", {}, 10) == {"population_size": 40, "max_generations": 60}
+    assert _light_params("ga", {}, 50)["generations"] == 100
+    assert _light_params("pso", {"num_particles": 90}, 10)["num_particles"] == 90

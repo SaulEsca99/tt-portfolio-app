@@ -60,6 +60,8 @@ class BacktestMetrics:
     cumulative_return: float
     equity_curve: pd.Series = field(default_factory=pd.Series)   # fecha → valor (base 1.0)
     windows: list[dict] = field(default_factory=list)            # pesos y fechas por ventana
+    avg_turnover: float = 0.0     # rotación media por rebalanceo (Σ|Δw|, 1.0 = compra inicial)
+    cost_bps: float = 0.0
 
 
 # ---------------------------------------------------------------------------
@@ -101,6 +103,7 @@ def run_walk_forward(
     config: WalkForwardConfig | None = None,
     start_date: date | None = None,
     end_date: date | None = None,
+    cost_bps: float = 0.0,
 ) -> BacktestMetrics:
     """
     Evalúa una estrategia con Walk-Forward Analysis.
@@ -111,6 +114,9 @@ def run_walk_forward(
         config:     Tamaños de ventana (12/3/3 por defecto).
         start_date: Primer día de evaluación fuera de muestra (opcional).
         end_date:   Último día de evaluación (opcional).
+        cost_bps:   Costo de transacción en puntos base por unidad rotada (Σ|Δw|); se descuenta
+                    del primer día de cada ventana, incluida la compra inicial (rotación 1.0).
+                    No modela el rebalanceo diario interno de la ventana.
 
     Returns:
         BacktestMetrics con la curva de equity fuera de muestra y los pesos por ventana.
@@ -126,6 +132,8 @@ def run_walk_forward(
 
     pieces: list[pd.Series] = []
     windows: list[dict] = []
+    turnovers: list[float] = []
+    w_prev = np.zeros(prices.shape[1])
 
     while t < stop:
         t_end = min(t + pd.DateOffset(months=config.test_months), stop + pd.Timedelta(days=1))
@@ -137,12 +145,17 @@ def run_walk_forward(
             if w.shape != (prices.shape[1],) or abs(w.sum() - 1.0) > 1e-6:
                 raise ValueError("La estrategia debe devolver pesos (N,) que sumen 1.")
             window_ret = rets.loc[test_mask].fillna(0.0) @ w
+            turnover = float(np.abs(w - w_prev).sum())
+            window_ret.iloc[0] -= turnover * cost_bps / 1e4
+            turnovers.append(turnover)
+            w_prev = w
             pieces.append(window_ret)
             windows.append({
                 "train_start": train.index[0].date().isoformat(),
                 "test_start": window_ret.index[0].date().isoformat(),
                 "test_end": window_ret.index[-1].date().isoformat(),
                 "weights": {c: float(x) for c, x in zip(prices.columns, w)},
+                "turnover": turnover,
             })
         else:
             logger.warning("Ventana omitida en %s: datos insuficientes.", t.date())
@@ -154,14 +167,21 @@ def run_walk_forward(
 
     metrics = compute_metrics(pd.concat(pieces))
     metrics.windows = windows
+    metrics.avg_turnover = float(np.mean(turnovers))
+    metrics.cost_bps = cost_bps
     return metrics
 
 
-def series_returns_over(metrics: BacktestMetrics, series_prices: pd.Series) -> BacktestMetrics:
+def series_returns_over(metrics: BacktestMetrics, series_prices: pd.Series,
+                        cost_bps: float = 0.0) -> BacktestMetrics:
     """Métricas de un único activo (p. ej. SPY) sobre el mismo periodo OOS de `metrics`."""
     eq_idx = metrics.equity_curve.index[1:]
     r = series_prices.sort_index().pct_change().reindex(eq_idx).dropna()
-    return compute_metrics(r)
+    if len(r):
+        r.iloc[0] -= cost_bps / 1e4          # compra inicial (rotación 1.0)
+    out = compute_metrics(r)
+    out.avg_turnover, out.cost_bps = 1.0, cost_bps
+    return out
 
 
 # ---------------------------------------------------------------------------

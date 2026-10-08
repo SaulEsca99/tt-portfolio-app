@@ -17,6 +17,8 @@ const OptimizeSchema = z.object({
   muSource: z.enum(["historical", "lstm", "blend"]).default("historical"),
 });
 
+export const maxDuration = 60;
+
 export async function POST(req: NextRequest) {
   // 1. Verificar sesión activa
   const session = await auth.api.getSession({ headers: req.headers });

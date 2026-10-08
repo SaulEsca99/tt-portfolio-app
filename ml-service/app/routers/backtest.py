@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.concurrency import run_in_threadpool
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -51,6 +51,7 @@ class BacktestRequest(BaseModel):
     benchmark: str = "equal_weight"   # "equal_weight" | "markowitz" | "sp500" | ticker
     start_date: date | None = None
     end_date: date | None = None
+    cost_bps: float = Field(0.0, ge=0.0, le=100.0)   # costo por unidad rotada, en puntos base
 
 
 class EquityPoint(CamelModel):
@@ -63,6 +64,7 @@ class MetricsOut(CamelModel):
     sortino: float
     max_drawdown: float
     cumulative_return: float
+    avg_turnover: float = 0.0
     equity_curve: list[EquityPoint]
 
 
@@ -75,6 +77,7 @@ class WindowOut(CamelModel):
     test_start: str
     test_end: str
     weights: dict[str, float]
+    turnover: float = 0.0
 
 
 class BacktestResponse(MetricsOut):
@@ -84,6 +87,23 @@ class BacktestResponse(MetricsOut):
     # El walk-forward re-estima μ con datos históricos de cada ventana de entrenamiento;
     # el LSTM global no se usa aquí porque estaría entrenado con datos posteriores (look-ahead).
     mu_source: str = "historical"
+    cost_bps: float = 0.0
+    params_used: dict = {}
+
+
+# Presupuesto ligero por ventana: el walk-forward re-optimiza ~8-20 veces; con el presupuesto
+# completo de /optimize tardaría decenas de segundos. Los parámetros explícitos de la corrida
+# original se respetan; solo se acota lo que no se especificó.
+_LIGHT = {"ga": ("population_size", "generations"), "pso": ("num_particles", "max_iterations"),
+          "de": ("population_size", "max_generations")}
+
+
+def _light_params(algorithm: str, params: dict, n: int) -> dict:
+    pop_key, it_key = _LIGHT[algorithm]
+    out = dict(params)
+    out.setdefault(pop_key, 40)
+    out.setdefault(it_key, min(1000, max(60, 2 * n)))
+    return out
 
 
 def _curve(m: BacktestMetrics, capital: float) -> list[EquityPoint]:
@@ -163,17 +183,18 @@ async def run_backtest(
     risk_aversion = float(portfolio.risk_aversion_lambda or 1.0)
     params = dict(run.params or {})
     objective = params.pop("objective", "sharpe")
+    params_used = _light_params(run.algorithm, params, n)
 
     def optimizer_strategy(train: pd.DataFrame) -> np.ndarray:
         P = train.to_numpy(dtype=float)
         res = run_algorithm(
             run.algorithm, list(train.columns), historical_mean_return(P), ledoit_wolf_cov(P),
-            risk_aversion, w_min, w_max, max_assets, params, objective,
+            risk_aversion, w_min, w_max, max_assets, params_used, objective,
         )
         return np.array([res.weights[t] for t in train.columns])
 
     def compute():
-        strat = run_walk_forward(prices, optimizer_strategy, start_date=body.start_date, end_date=body.end_date)
+        strat = run_walk_forward(prices, optimizer_strategy, None, body.start_date, body.end_date, body.cost_bps)
         return strat
 
     try:
@@ -188,18 +209,19 @@ async def run_backtest(
     try:
         if bench_name == "equal_weight":
             bench = await run_in_threadpool(
-                run_walk_forward, prices, equal_weight_strategy, None, body.start_date, body.end_date)
+                run_walk_forward, prices, equal_weight_strategy, None, body.start_date, body.end_date,
+                body.cost_bps)
         elif bench_name == "markowitz":
             bench = await run_in_threadpool(
                 run_walk_forward, prices, make_markowitz_strategy(w_min, w_max), None,
-                body.start_date, body.end_date)
+                body.start_date, body.end_date, body.cost_bps)
         else:
             ticker = BENCHMARK_ALIASES.get(bench_name.lower(), bench_name.upper())
             series = await load_benchmark_series(db, ticker, start_d, end_d)
             if series.empty:
                 raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY,
                                     f"No hay datos para el benchmark '{bench_name}'.")
-            bench = series_returns_over(strat, series)
+            bench = series_returns_over(strat, series, body.cost_bps)
     except ValueError as exc:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(exc))
 
@@ -213,11 +235,15 @@ async def run_backtest(
         sortino=strat.sortino,
         max_drawdown=strat.max_drawdown,
         cumulative_return=strat.cumulative_return,
+        avg_turnover=strat.avg_turnover,
+        cost_bps=body.cost_bps,
+        params_used=params_used,
         equity_curve=_curve(strat, capital),
         benchmark=BenchmarkOut(
             name=bench_name, sharpe=bench.sharpe, sortino=bench.sortino,
             max_drawdown=bench.max_drawdown, cumulative_return=bench.cumulative_return,
+            avg_turnover=bench.avg_turnover,
             equity_curve=_curve(bench, capital),
         ),
-        windows=strat.windows,
+        windows=[WindowOut(**w) for w in strat.windows],
     )
