@@ -157,7 +157,7 @@ async def run_optimization(
                        "No hay un modelo LSTM entrenado; usa mu_source='historical'.")
         model, predictor = found
         try:
-            mu_lstm = lstm_expected_returns(predictor, prices)
+            mu_lstm = lstm_expected_returns(predictor, prices, mu)
         except ValueError as exc:
             await fail(status.HTTP_422_UNPROCESSABLE_ENTITY, str(exc))
         mu = mu_lstm if body.mu_source == "lstm" else 0.5 * mu_lstm + 0.5 * mu

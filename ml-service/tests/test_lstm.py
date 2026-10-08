@@ -154,3 +154,24 @@ async def test_optimize_mu_sources(client, session_factory):
     assert res["historical"]["muSource"] == "historical"
     assert res["lstm"]["muSource"] == "lstm:v1.test"
     assert res["blend"]["muSource"] == "blend:v1.test"
+
+
+def test_lstm_mu_calibration_caps_dispersion():
+    """C4 — μ del LSTM no puede tener más dispersión que el histórico, y conserva el orden."""
+    from app.services.lstm_service import lstm_expected_returns
+
+    class Fake:
+        class config: horizon_days = 5
+        def predict_return(self, s): return float(s.iloc[0])      # r̂ = primer valor de la serie
+
+    prices = pd.DataFrame({f"S{i}": [v, v] for i, v in enumerate([0.001, 0.004, -0.002, 0.003])})
+    raw = lstm_expected_returns(Fake(), prices)
+    mu_hist = np.array([0.08, 0.10, 0.06, 0.12])
+    cal = lstm_expected_returns(Fake(), prices, mu_hist)
+    assert np.std(raw) > np.std(mu_hist)                  # sin calibrar domina
+    assert np.std(cal) == pytest.approx(np.std(mu_hist))   # calibrado: misma dispersión
+    assert cal.mean() == pytest.approx(mu_hist.mean())
+    assert (np.argsort(cal) == np.argsort(raw)).all()
+    # dispersión del modelo menor que la histórica: no se amplifica
+    small = lstm_expected_returns(Fake(), prices * 0 + 1e-6, mu_hist)
+    assert np.allclose(small, mu_hist.mean())
