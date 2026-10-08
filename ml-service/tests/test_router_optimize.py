@@ -20,11 +20,11 @@ async def test_optimize_persists_and_respects_constraints(client, session_factor
     assert sum(ws) == pytest.approx(1.0, abs=1e-4)
     assert max(ws) <= 0.6 + 1e-6
     assert len(ws) <= 3                      # max_assets del portafolio
-    assert body["mu_source"] == "historical"
+    assert body["muSource"] == "historical"
 
     async with session_factory() as db:
         run = (await db.execute(select(OptimizationRun).where(
-            OptimizationRun.id == uuid.UUID(body["optimization_run_id"])))).scalar_one()
+            OptimizationRun.id == uuid.UUID(body["optimizationRunId"])))).scalar_one()
         assert run.status == "done" and run.completed_at is not None
         rows = (await db.execute(select(OptimizationResult).where(
             OptimizationResult.optimization_run_id == run.id))).scalars().all()

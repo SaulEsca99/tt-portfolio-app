@@ -178,6 +178,18 @@ def repair(
             if support.sum() >= max_assets:
                 break
             support[idx] = True
+        # Factibilidad: los activos elegidos deben poder sumar 1 con sus cotas máximas.
+        # Si no, se intercambia el de menor cota por el excluido de mayor cota.
+        while hi[support].sum() < 1.0 - 1e-12:
+            outside = np.where(~support)[0]
+            swappable = np.where(support & ~forced)[0]
+            if len(outside) == 0 or len(swappable) == 0:
+                break
+            cand_in = outside[np.argmax(hi[outside])]
+            cand_out = swappable[np.argmin(hi[swappable])]
+            if hi[cand_in] <= hi[cand_out]:
+                break
+            support[cand_out], support[cand_in] = False, True
         lo = np.where(support, lo, 0.0)
         hi = np.where(support, hi, 0.0)
 

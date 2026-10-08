@@ -55,6 +55,7 @@ async def load_price_matrix(
 
     df = pd.DataFrame(rows, columns=["date", "ticker", "adj_close", "close"])
     df["price"] = df["adj_close"].fillna(df["close"]).astype(float)
+    df.loc[df["price"] <= 0, "price"] = float("nan")   # datos corruptos (precio 0/negativo)
     wide = df.pivot_table(index="date", columns="ticker", values="price", aggfunc="last")
     wide.index = pd.to_datetime(wide.index)
     wide = wide.sort_index().ffill(limit=3)
@@ -87,3 +88,34 @@ async def load_benchmark_series(
     price = df["adj_close"] if "adj_close" in df.columns else df["close"]
     s = pd.Series(price.astype(float).to_numpy(), index=pd.to_datetime(df["date"]))
     return s.sort_index()
+
+
+MIN_HISTORY_RATIO = 0.5   # un activo con menos de 50 % del historial más largo se excluye
+
+
+def prepare_universe(
+    wide: pd.DataFrame, tickers: list[str]
+) -> tuple[pd.DataFrame, dict[str, str]]:
+    """
+    Convierte la matriz (con NaN) en una matriz alineada SIN recortar la muestra por un
+    solo activo problemático. Excluye, con motivo, a los activos sin precios o con un
+    historial muy corto frente al más largo. Devuelve (precios alineados, {ticker: motivo}).
+    """
+    excluded: dict[str, str] = {}
+    present = [t for t in tickers if t in wide.columns and wide[t].notna().any()]
+    for t in tickers:
+        if t not in present:
+            excluded[t] = "sin precios en la base de datos"
+    if not present:
+        return pd.DataFrame(), excluded
+
+    counts = wide[present].count()
+    longest = int(counts.max())
+    keep = []
+    for t in present:
+        if counts[t] < MIN_HISTORY_RATIO * longest:
+            excluded[t] = f"historial muy corto ({int(counts[t])} de {longest} días)"
+        else:
+            keep.append(t)
+    aligned = wide[keep].dropna(how="any")
+    return aligned, excluded

@@ -134,10 +134,10 @@ async def test_predict_endpoint_and_cache(client, session_factory):
     r = await client.post("/predict", json={"ticker": "AAA", "horizon_days": 21})
     assert r.status_code == 200, r.text
     body = r.json()
-    assert body["model_version"] == "v1.test" and body["horizon_days"] == 21
-    assert body["predicted_risk"] > 0
+    assert body["modelVersion"] == "v1.test" and body["horizonDays"] == 21
+    assert body["predictedRisk"] > 0
     r2 = await client.post("/predict", json={"ticker": "AAA", "horizon_days": 21})
-    assert r2.json()["predicted_return"] == pytest.approx(body["predicted_return"], abs=1e-5)
+    assert r2.json()["predictedReturn"] == pytest.approx(body["predictedReturn"], abs=1e-5)
 
 
 async def test_optimize_mu_sources(client, session_factory):
@@ -151,6 +151,6 @@ async def test_optimize_mu_sources(client, session_factory):
         assert r.status_code == 200, r.text
         res[src] = r.json()
         assert sum(w["weight"] for w in res[src]["weights"]) == pytest.approx(1.0, abs=1e-4)
-    assert res["historical"]["mu_source"] == "historical"
-    assert res["lstm"]["mu_source"] == "lstm:v1.test"
-    assert res["blend"]["mu_source"] == "blend:v1.test"
+    assert res["historical"]["muSource"] == "historical"
+    assert res["lstm"]["muSource"] == "lstm:v1.test"
+    assert res["blend"]["muSource"] == "blend:v1.test"

@@ -12,6 +12,7 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.schemas import CamelModel
 from app.core.security import verify_api_key
 from app.data import fetch_yfinance, fetch_alpha_vantage
 from app.db.models import Asset, PriceHistory
@@ -25,7 +26,7 @@ class FetchAssetRequest(BaseModel):
     force_full_history: bool = False  # True solo la primera vez
 
 
-class AssetResponse(BaseModel):
+class AssetResponse(CamelModel):
     id: str
     ticker: str
     name: str | None

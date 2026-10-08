@@ -24,6 +24,7 @@ from app.backtesting.walk_forward import (
     run_walk_forward,
     series_returns_over,
 )
+from app.core.schemas import CamelModel
 from app.core.security import verify_api_key
 from app.db.models import (
     Asset,
@@ -36,7 +37,7 @@ from app.db.models import (
 from app.db.session import get_db
 from app.optimization.portfolio_math import historical_mean_return, ledoit_wolf_cov
 from app.optimization.runner import run_algorithm
-from app.services.market_data import load_benchmark_series, load_price_matrix
+from app.services.market_data import load_benchmark_series, load_price_matrix, prepare_universe
 
 logger = logging.getLogger(__name__)
 router = APIRouter(dependencies=[Depends(verify_api_key)])
@@ -52,12 +53,12 @@ class BacktestRequest(BaseModel):
     end_date: date | None = None
 
 
-class EquityPoint(BaseModel):
+class EquityPoint(CamelModel):
     date: date
     portfolio_value: float
 
 
-class MetricsOut(BaseModel):
+class MetricsOut(CamelModel):
     sharpe: float
     sortino: float
     max_drawdown: float
@@ -69,10 +70,17 @@ class BenchmarkOut(MetricsOut):
     name: str
 
 
+class WindowOut(CamelModel):
+    train_start: str
+    test_start: str
+    test_end: str
+    weights: dict[str, float]
+
+
 class BacktestResponse(MetricsOut):
     backtest_id: str
     benchmark: BenchmarkOut
-    windows: list[dict]
+    windows: list[WindowOut]
     # El walk-forward re-estima μ con datos históricos de cada ventana de entrenamiento;
     # el LSTM global no se usa aquí porque estaría entrenado con datos posteriores (look-ahead).
     mu_source: str = "historical"
@@ -141,7 +149,8 @@ async def run_backtest(
         )
     ).all()
 
-    prices = await load_price_matrix(db, [a.id for _, a in cand_rows])
+    wide = await load_price_matrix(db, [a.id for _, a in cand_rows], align=False)
+    prices, _excluded = prepare_universe(wide, [a.ticker for _, a in cand_rows])
     if prices.empty or prices.shape[1] < 2:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Sin historial de precios suficiente.")
 

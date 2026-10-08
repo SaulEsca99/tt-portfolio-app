@@ -13,6 +13,7 @@ from pydantic import BaseModel
 from sqlalchemy import select, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.schemas import CamelModel
 from app.core.security import verify_api_key
 from app.db.models import Asset, LstmModel, LstmPrediction
 from app.db.session import get_db
@@ -27,7 +28,7 @@ class PredictRequest(BaseModel):
     horizon_days: int = 21   # horizonte de predicción (días de trading)
 
 
-class PredictResponse(BaseModel):
+class PredictResponse(CamelModel):
     ticker: str
     model_version: str
     prediction_date: date

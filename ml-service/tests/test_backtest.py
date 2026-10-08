@@ -90,14 +90,14 @@ async def test_backtest_endpoint(client, benchmark):
         "portfolio_id": client.portfolio_id, "algorithm": "ga", "params": FAST})
     assert opt.status_code == 200, opt.text
     r = await client.post("/backtest", json={
-        "optimization_run_id": opt.json()["optimization_run_id"], "benchmark": benchmark})
+        "optimization_run_id": opt.json()["optimizationRunId"], "benchmark": benchmark})
     assert r.status_code == 200, r.text
     b = r.json()
-    assert b["max_drawdown"] <= 0
-    assert len(b["equity_curve"]) > 100 and len(b["windows"]) >= 4
+    assert b["maxDrawdown"] <= 0
+    assert len(b["equityCurve"]) > 100 and len(b["windows"]) >= 4
     assert b["benchmark"]["name"] == benchmark
-    assert b["equity_curve"][0]["portfolio_value"] == pytest.approx(10_000, rel=0.05)
-    for k in ("sharpe", "sortino", "cumulative_return"):
+    assert b["equityCurve"][0]["portfolioValue"] == pytest.approx(10_000, rel=0.05)
+    for k in ("sharpe", "sortino", "cumulativeReturn"):
         assert np.isfinite(b[k]) and np.isfinite(b["benchmark"][k])
     # cada ventana respeta max_assets = 3
     assert all(sum(v > 1e-6 for v in w["weights"].values()) <= 3 for w in b["windows"])

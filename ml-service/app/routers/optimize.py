@@ -15,6 +15,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.schemas import CamelModel
 from app.core.security import verify_api_key
 from app.db.models import (
     Asset,
@@ -27,7 +28,7 @@ from app.db.session import get_db
 from app.optimization.portfolio_math import historical_mean_return, ledoit_wolf_cov
 from app.optimization.runner import run_algorithm
 from app.services.lstm_service import latest_predictor, lstm_expected_returns
-from app.services.market_data import MIN_OBSERVATIONS, load_price_matrix
+from app.services.market_data import MIN_OBSERVATIONS, load_price_matrix, prepare_universe
 
 logger = logging.getLogger(__name__)
 router = APIRouter(dependencies=[Depends(verify_api_key)])
@@ -44,12 +45,12 @@ class OptimizeRequest(BaseModel):
     params: dict = Field(default_factory=dict)  # hiperparámetros opcionales del algoritmo
 
 
-class WeightResult(BaseModel):
+class WeightResult(CamelModel):
     ticker: str
     weight: float
 
 
-class OptimizeResponse(BaseModel):
+class OptimizeResponse(CamelModel):
     optimization_run_id: str
     algorithm: str
     objective: str
@@ -59,6 +60,9 @@ class OptimizeResponse(BaseModel):
     expected_risk: float
     sharpe_ratio: float
     convergence_history: list[float]
+    # Activos candidatos que no entraron a la optimización, con el motivo
+    excluded: dict[str, str] = Field(default_factory=dict)
+    n_observations: int = 0
 
 
 @router.post("", response_model=OptimizeResponse)
@@ -119,22 +123,26 @@ async def run_optimization(
 
     tickers = [a.ticker for _, a in cand_rows]
     asset_by_ticker = {a.ticker: a for _, a in cand_rows}
-    prices = await load_price_matrix(db, [a.id for _, a in cand_rows])
-    prices = prices.reindex(columns=tickers).dropna(axis=1, how="all") if not prices.empty else prices
+    wide = await load_price_matrix(db, [a.id for _, a in cand_rows], align=False)
+    prices, excluded = prepare_universe(wide, tickers)
 
     if prices.empty or prices.shape[1] < 2 or len(prices) < MIN_OBSERVATIONS + 1:
         await fail(
             status.HTTP_422_UNPROCESSABLE_ENTITY,
-            "Historial de precios insuficiente. Descarga los datos con /assets/fetch.",
+            "Historial de precios insuficiente. Descarga los datos con /assets/fetch."
+            + (f" Excluidos: {excluded}" if excluded else ""),
         )
 
     tickers = list(prices.columns)  # activos con datos
     cand_by_ticker = {a.ticker: c for c, a in cand_rows}
     P = prices.to_numpy(dtype=float)
 
-    mu = historical_mean_return(P)
+    try:
+        mu = historical_mean_return(P)
+        sigma = ledoit_wolf_cov(P)
+    except ValueError as exc:
+        await fail(status.HTTP_422_UNPROCESSABLE_ENTITY, f"Datos de precios inválidos: {exc}")
     mu_source = "historical"
-    sigma = ledoit_wolf_cov(P)
 
     if body.mu_source != "historical":
         found = await latest_predictor(db)
@@ -187,7 +195,8 @@ async def run_optimization(
             )
     run.status = "done"
     run.completed_at = datetime.now(timezone.utc)
-    run.params = {**run.params, "mu_source": mu_source, "max_assets": max_assets}
+    run.params = {**run.params, "mu_source": mu_source, "max_assets": max_assets,
+                  "excluded": excluded, "n_observations": int(len(prices))}
 
     return OptimizeResponse(
         optimization_run_id=str(run.id),
@@ -203,4 +212,6 @@ async def run_optimization(
         expected_risk=res.expected_risk,
         sharpe_ratio=res.sharpe_ratio,
         convergence_history=res.convergence_history,
+        excluded=excluded,
+        n_observations=int(len(prices)),
     )
