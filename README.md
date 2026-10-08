@@ -62,3 +62,13 @@ La aplicación estará disponible en `http://localhost:3000`.
 4. **Backtesting:** Evaluación histórica del rendimiento (Equity Curve vs Benchmark).
 5. **Market Data:** Datos de mercado en vivo y predicciones a corto plazo con LSTM.
 6. **AI Assistant:** Chatbot para consultar métricas y recibir recomendaciones de balanceo.
+
+## ⚙️ Notas del motor ML (`ml-service/`)
+
+- **Algoritmos:** GA, PSO y DE comparten firma (`optimize(...)`) y restricciones (pesos mín/máx, cardinalidad, suma 1) vía `repair()`. Semilla fija por defecto (42) → resultados reproducibles.
+- **Hiperparámetros** validados en `POST /optimize` (422 si están fuera de rango o población × iteraciones > 150 000). DE usa `max(200, 12·N)` generaciones si no se indican.
+- **Objetivo Sharpe:** si ninguna cartera factible supera la tasa libre de riesgo (μ ≤ 0), se minimiza la varianza y la respuesta lo indica en `objectiveFallback`.
+- **`mu_source`:** `historical` (defecto) | `lstm` | `blend`. El μ del LSTM se calibra para no exceder la dispersión histórica.
+- **Backtest** (`POST /backtest`): walk-forward 12/3/3 con presupuesto ligero por ventana (1–4 s típico), `cost_bps` (0–100) y rotación (`avgTurnover`). Usa solo μ histórico (sin look-ahead).
+- **LSTM:** se entrena fuera del servicio web (`requirements-train.txt`, GitHub Actions); el servicio hace inferencia con NumPy. Experimento comparativo: `python -m scripts.lstm_walk_forward_experiment --help`.
+- **Pruebas:** `cd ml-service && pip install -r requirements-dev.txt && pytest`.
