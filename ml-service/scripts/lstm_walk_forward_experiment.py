@@ -11,6 +11,7 @@ Se reportan Sharpe/Sortino/MDD/retorno OOS y rotación de cada variante junto co
 Uso (requiere torch; ver requirements-train.txt):
     python -m scripts.lstm_walk_forward_experiment --synthetic trending --assets 8
     python -m scripts.lstm_walk_forward_experiment --universe acciones_grandes   # Yahoo, sin BD
+    python -m scripts.lstm_walk_forward_experiment --csv data_prices/defensivo.csv   # CSV de export_prices
     python -m scripts.lstm_walk_forward_experiment --tickers AAPL MSFT ...        # lee price_history
 """
 from __future__ import annotations
@@ -114,6 +115,7 @@ def main() -> None:
     src = ap.add_mutually_exclusive_group(required=True)
     src.add_argument("--synthetic", choices=["random", "trending"])
     src.add_argument("--tickers", nargs="+", help="lee price_history de la BD (DATABASE_URL)")
+    src.add_argument("--csv", help="CSV de precios (columna date + un ticker por columna), ver scripts.export_prices")
     src.add_argument("--universe", help="descarga de Yahoo (sin BD): acciones_grandes | etf_sectores | defensivo")
     ap.add_argument("--assets", type=int, default=8)
     ap.add_argument("--algorithm", default="de", choices=["ga", "pso", "de"])
@@ -125,6 +127,8 @@ def main() -> None:
 
     if a.synthetic:
         prices = synthetic_prices(a.synthetic, a.assets)
+    elif a.csv:
+        prices = pd.read_csv(a.csv, index_col="date", parse_dates=True).sort_index().dropna()
     elif a.universe:
         from scripts.universe_study import UNIVERSES, load_prices
         prices = load_prices(UNIVERSES[a.universe], a.years, offline=False)
