@@ -10,7 +10,8 @@ Se reportan Sharpe/Sortino/MDD/retorno OOS y rotación de cada variante junto co
 
 Uso (requiere torch; ver requirements-train.txt):
     python -m scripts.lstm_walk_forward_experiment --synthetic trending --assets 8
-    python -m scripts.lstm_walk_forward_experiment --tickers AAPL MSFT ...   # lee price_history
+    python -m scripts.lstm_walk_forward_experiment --universe acciones_grandes   # Yahoo, sin BD
+    python -m scripts.lstm_walk_forward_experiment --tickers AAPL MSFT ...        # lee price_history
 """
 from __future__ import annotations
 
@@ -112,16 +113,21 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     src = ap.add_mutually_exclusive_group(required=True)
     src.add_argument("--synthetic", choices=["random", "trending"])
-    src.add_argument("--tickers", nargs="+")
+    src.add_argument("--tickers", nargs="+", help="lee price_history de la BD (DATABASE_URL)")
+    src.add_argument("--universe", help="descarga de Yahoo (sin BD): acciones_grandes | etf_sectores | defensivo")
     ap.add_argument("--assets", type=int, default=8)
     ap.add_argument("--algorithm", default="de", choices=["ga", "pso", "de"])
     ap.add_argument("--epochs", type=int, default=8)
-    ap.add_argument("--cost-bps", type=float, default=0.0)
+    ap.add_argument("--cost-bps", type=float, default=10.0)
+    ap.add_argument("--years", type=int, default=6, help="historial a descargar con --universe")
     a = ap.parse_args()
     logging.basicConfig(level="INFO", format="%(message)s")
 
     if a.synthetic:
         prices = synthetic_prices(a.synthetic, a.assets)
+    elif a.universe:
+        from scripts.universe_study import UNIVERSES, load_prices
+        prices = load_prices(UNIVERSES[a.universe], a.years, offline=False)
     else:
         import asyncio
         prices = asyncio.run(_load_prices(a.tickers))
