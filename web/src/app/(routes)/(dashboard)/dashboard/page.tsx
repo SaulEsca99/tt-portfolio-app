@@ -26,7 +26,7 @@ export default function DashboardPage() {
   const { greeting, formattedDate } = useMemo(() => {
     const now = new Date();
     const hour = now.getHours();
-    let greet = d.greetEvening;
+    let greet: string = d.greetEvening;
     if (hour >= 5 && hour < 12) greet = d.greetMorning;
     else if (hour >= 12 && hour < 18) greet = d.greetAfternoon;
     const date = now.toLocaleDateString(lang === 'es' ? 'es-MX' : 'en-US', {
