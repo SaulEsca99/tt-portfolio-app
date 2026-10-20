@@ -1,0 +1,5 @@
+# Dependencias para ENTRENAR el LSTM (job mensual). No se instalan en el servicio web.
+# En CI usar la rueda CPU para ahorrar espacio:
+#   pip install torch --index-url https://download.pytorch.org/whl/cpu
+-r requirements.txt
+torch>=2.3.0

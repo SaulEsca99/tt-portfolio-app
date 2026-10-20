@@ -16,14 +16,20 @@ ml-service/
 │   │   ├── fetch_alpha_vantage.py   # Fuente de respaldo / validación
 │   │   └── price_updater.py         # Job diario incremental (RF-01, RF-02)
 │   ├── models/
-│   │   ├── lstm_model.py     # Arquitectura LSTM (TF/PyTorch)
-│   │   └── train.py          # Job de reentrenamiento mensual
+│   │   ├── lstm_model.py     # Features, entrenamiento (PyTorch) e inferencia (NumPy)
+│   │   └── train.py          # Job de reentrenamiento mensual (guarda pesos en la BD)
 │   ├── optimization/
+│   │   ├── portfolio_math.py # Retornos log, Ledoit-Wolf, fitness, repair (cotas + cardinalidad)
+│   │   ├── common.py         # OptimizationResult y validación de cotas
+│   │   ├── runner.py         # Despacho GA/PSO/DE (Strategy)
 │   │   ├── ga.py             # Algoritmo Genético (RF-04/05)
 │   │   ├── pso.py            # Particle Swarm Optimization
-│   │   └── de.py             # Differential Evolution
+│   │   └── de.py             # Differential Evolution (rand/1/bin)
+│   ├── services/
+│   │   ├── market_data.py    # Matriz de precios diaria desde la BD + benchmarks
+│   │   └── lstm_service.py   # Último modelo LSTM y vector μ para el optimizador
 │   ├── backtesting/
-│   │   └── walk_forward.py   # Walk-Forward Analysis (Sección 4.6.4 TT)
+│   │   └── walk_forward.py   # Walk-forward 12/3/3, Sharpe/Sortino/MDD, benchmarks
 │   ├── db/
 │   │   ├── models.py         # SQLAlchemy — mismo esquema que Drizzle
 │   │   └── session.py        # Conexión a PostgreSQL (Supabase)
@@ -33,7 +39,8 @@ ml-service/
 │       ├── predict.py        # POST /predict
 │       └── assets.py         # GET /assets, POST /assets/fetch
 ├── tests/
-├── requirements.txt
+├── requirements.txt          # servicio web (sin torch)
+├── requirements-train.txt    # + torch, solo para entrenar el LSTM
 ├── requirements-dev.txt
 ├── .env.example
 ├── render.yaml               # Configuración de servicios en Render
@@ -71,12 +78,37 @@ Documentación interactiva: `http://localhost:8000/docs`
 | POST | `/assets/fetch` | Fetch on-demand de un ticker nuevo | RF-01 |
 | GET  | `/health` | Health check (para Render) | — |
 
-## Despliegue en Render
+## Algoritmos y decisiones de diseño
 
-Se usan **3 servicios** en Render (ver `render.yaml`):
-1. **Web Service** — `uvicorn app.main:app` (atiende peticiones de Next.js)
-2. **Cron Job diario** — `python -m app.data.price_updater` (después del cierre de NY)
-3. **Cron Job mensual** — `python -m app.models.train` (día 1 de cada mes)
+- **Datos**: precios diarios ajustados de los últimos 5 años; anualización con 252 días.
+- **Σ**: estimador de Ledoit-Wolf. **μ**: histórico (por defecto), LSTM o mezcla 50/50
+  (`mu_source` en `POST /optimize`). La anualización del retorno predicho por el LSTM
+  (`r̂ · 252 / h`) amplifica el ruido: compara siempre contra el histórico antes de usarlo.
+- **Restricciones**: suma 1, cotas por activo y cardinalidad `max_assets`, aplicadas con
+  `portfolio_math.repair` tras cada operador (GA, PSO y DE usan la misma función).
+- **Reproducibilidad (RNF-07)**: semilla fija por defecto (`seed=42`) en los tres algoritmos.
+- **Backtesting**: en cada ventana (12 m entrenamiento / 3 m prueba / paso 3 m) se re-ejecuta
+  el algoritmo con datos previos y se evalúa fuera de muestra. Benchmarks: `equal_weight`,
+  `markowitz` (SLSQP, máx. Sharpe), `sp500` (SPY) o cualquier ticker. El backtest usa μ
+  histórico por ventana (el LSTM global estaría entrenado con datos posteriores).
+- **LSTM**: modelo global (5 features, ventana 30, horizonte 5), escalado ajustado solo con
+  train. Se entrena fuera del servicio y los pesos viven en `lstm_model.weights_base64`;
+  Render hace la inferencia con NumPy (sin torch).
 
-> ⚠️ El free tier de Render "duerme" el Web Service después de 15 min sin tráfico.  
-> La primera petición tras inactividad puede tardar ~30-50 s. Los Cron Jobs no se ven afectados.
+## Pruebas
+
+```bash
+pip install -r requirements.txt -r requirements-dev.txt
+pip install torch --index-url https://download.pytorch.org/whl/cpu   # opcional: pruebas del LSTM
+python -m pytest tests -q
+```
+
+Los tests de routers usan SQLite en memoria con datos sintéticos (no tocan Supabase).
+
+## Despliegue
+
+- **Render** (`render.yaml`): solo el Web Service FastAPI.
+- **GitHub Actions** (gratis): `price-update.yml` (diario) y `lstm-retrain.yml` (mensual).
+  Configura los secrets `DATABASE_URL`, `ML_SERVICE_API_KEY` y `ALPHA_VANTAGE_API_KEY`.
+- Tras actualizar el esquema Drizzle (columna `lstm_model.weights_base64`) ejecuta
+  `pnpm db:generate && pnpm db:migrate` (o `pnpm db:push`) en `web/`.

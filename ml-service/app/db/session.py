@@ -8,12 +8,16 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 from app.core.config import settings
 
+# pool_size/max_overflow solo aplican a Postgres (SQLite se usa únicamente en pruebas)
+_pool_kwargs = (
+    {} if settings.DATABASE_URL.startswith("sqlite") else {"pool_size": 5, "max_overflow": 10}
+)
+
 engine = create_async_engine(
     settings.DATABASE_URL,
     pool_pre_ping=True,   # detecta conexiones caídas antes de usarlas
-    pool_size=5,
-    max_overflow=10,
     echo=(settings.ENVIRONMENT == "development"),
+    **_pool_kwargs,
 )
 
 AsyncSessionLocal = async_sessionmaker(

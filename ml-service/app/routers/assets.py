@@ -4,7 +4,7 @@ Router de activos: registra nuevos tickers y dispara fetch on-demand (RF-01).
 from __future__ import annotations
 
 import uuid
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timezone, timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -12,6 +12,7 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.schemas import CamelModel
 from app.core.security import verify_api_key
 from app.data import fetch_yfinance, fetch_alpha_vantage
 from app.db.models import Asset, PriceHistory
@@ -25,7 +26,7 @@ class FetchAssetRequest(BaseModel):
     force_full_history: bool = False  # True solo la primera vez
 
 
-class AssetResponse(BaseModel):
+class AssetResponse(CamelModel):
     id: str
     ticker: str
     name: str | None
@@ -80,9 +81,8 @@ async def fetch_asset(
     last_date: date | None = result.scalar()
 
     if body.force_full_history or last_date is None:
-        start = date(2019, 1, 1)  # 5 años de historial para el LSTM
+        start = date.today() - timedelta(days=365 * 5 + 2)  # ~5 años de historial para el LSTM
     else:
-        from datetime import timedelta
         start = last_date + timedelta(days=1)
 
     today = date.today()

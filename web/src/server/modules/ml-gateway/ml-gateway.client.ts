@@ -14,6 +14,8 @@ type HttpMethod = "GET" | "POST" | "PUT" | "DELETE";
 interface RequestOptions {
   method?: HttpMethod;
   body?: unknown;
+  /** Tiempo máximo de espera en ms (por defecto 55 s: menos que maxDuration de la ruta). */
+  timeoutMs?: number;
 }
 
 class MlGatewayError extends Error {
@@ -28,7 +30,7 @@ class MlGatewayError extends Error {
 
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const url = `${env.ML_SERVICE_URL}${path}`;
-  const { method = "GET", body } = options;
+  const { method = "GET", body, timeoutMs = 55_000 } = options;
 
   const res = await fetch(url, {
     method,
@@ -39,6 +41,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     body: body ? JSON.stringify(body) : undefined,
     // Sin caché — siempre queremos datos frescos del ml-service
     cache: "no-store",
+    signal: AbortSignal.timeout(timeoutMs),
   });
 
   if (!res.ok) {
@@ -65,10 +68,19 @@ export interface AssetResponse {
 export interface OptimizeResponse {
   optimizationRunId: string;
   algorithm: string;
+  objective: string;
+  /** "historical" | "lstm:<versión>" | "blend:<versión>" */
+  muSource: string;
   weights: { ticker: string; weight: number }[];
   expectedReturn: number;
   expectedRisk: number;
   sharpeRatio: number;
+  convergenceHistory: number[];
+  /** Activos descartados por historial insuficiente. */
+  excluded?: string[];
+  nObservations?: number;
+  /** Motivo si el objetivo efectivo difiere del solicitado (p. ej. retornos esperados ≤ 0). */
+  objectiveFallback?: string | null;
 }
 
 export interface BacktestResponse {
@@ -77,7 +89,25 @@ export interface BacktestResponse {
   sortino: number;
   maxDrawdown: number;
   cumulativeReturn: number;
+  /** Rotación media por rebalanceo (Σ|Δw|; 1.0 = compra inicial). */
+  avgTurnover: number;
+  costBps: number;
+  /** Hiperparámetros realmente usados por ventana (presupuesto ligero). */
+  paramsUsed: Record<string, unknown>;
+  muSource: string;
   equityCurve: { date: string; portfolioValue: number }[];
+  /** Benchmark evaluado sobre el mismo periodo fuera de muestra. */
+  benchmark: {
+    name: string;
+    sharpe: number;
+    sortino: number;
+    maxDrawdown: number;
+    cumulativeReturn: number;
+    avgTurnover: number;
+    equityCurve: { date: string; portfolioValue: number }[];
+  };
+  /** Pesos y fechas de cada ventana del walk-forward. */
+  windows: { trainStart: string; testStart: string; testEnd: string; weights: Record<string, number>; turnover: number }[];
 }
 
 export interface PredictResponse {
@@ -102,10 +132,24 @@ export const mlGateway = {
     }),
 
   /** Ejecuta el algoritmo de optimización (RF-04, RF-05). */
-  optimize: (portfolioId: string, algorithm: "ga" | "pso" | "de", params?: Record<string, unknown>) =>
+  optimize: (
+    portfolioId: string,
+    algorithm: "ga" | "pso" | "de",
+    params?: Record<string, unknown>,
+    options?: {
+      objective?: "sharpe" | "min_variance" | "utility";
+      muSource?: "historical" | "lstm" | "blend";
+    },
+  ) =>
     request<OptimizeResponse>("/optimize", {
       method: "POST",
-      body: { portfolio_id: portfolioId, algorithm, params: params ?? {} },
+      body: {
+        portfolio_id: portfolioId,
+        algorithm,
+        params: params ?? {},
+        objective: options?.objective ?? "sharpe",
+        mu_source: options?.muSource ?? "historical",
+      },
     }),
 
   /** Ejecuta Walk-Forward backtesting (RF-07, RF-08). */
@@ -114,6 +158,7 @@ export const mlGateway = {
     benchmark = "equal_weight",
     startDate?: string,
     endDate?: string,
+    costBps = 0,
   ) =>
     request<BacktestResponse>("/backtest", {
       method: "POST",
@@ -122,6 +167,7 @@ export const mlGateway = {
         benchmark,
         start_date: startDate,
         end_date: endDate,
+        cost_bps: costBps,
       },
     }),
 

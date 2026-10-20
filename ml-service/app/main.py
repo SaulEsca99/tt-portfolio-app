@@ -2,6 +2,9 @@
 Entrypoint de FastAPI.
 Registra los routers y configura middleware de seguridad.
 """
+import logging
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -9,7 +12,27 @@ from app.core.config import settings
 from app.core.security import verify_api_key
 from app.routers import optimize, backtest, predict, assets
 
+logger = logging.getLogger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    # Un fallo de mantenimiento nunca debe impedir que el servicio arranque.
+    try:
+        from app.db.session import AsyncSessionLocal
+        from app.services.maintenance import reap_stale_runs
+
+        async with AsyncSessionLocal() as db:
+            n = await reap_stale_runs(db)
+        if n:
+            logger.warning("%d corrida(s) 'running' obsoletas marcadas como error", n)
+    except Exception:  # noqa: BLE001
+        logger.exception("No se pudo limpiar corridas obsoletas")
+    yield
+
+
 app = FastAPI(
+    lifespan=lifespan,
     title="TT — Portfolio Optimization ML Service",
     version="0.1.0",
     # Oculta la documentación en producción (no es necesaria ahí)

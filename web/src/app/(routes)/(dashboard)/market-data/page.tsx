@@ -9,11 +9,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { marketData } from '@/client/lib/mock-data';
 import { PageIntro } from '@/client/components/ui/dashboard-widgets';
+import { useT } from '@/client/lib/i18n/i18n-context';
 
 export default function MarketDataPage() {
   const [query, setQuery] = useState('');
   const [refreshed, setRefreshed] = useState(false);
-  
+  const { t } = useT();
+  const m = t.marketData;
+
   const filtered = marketData.filter((item) =>
     `${item.ticker} ${item.name}`.toLowerCase().includes(query.toLowerCase())
   );
@@ -21,9 +24,9 @@ export default function MarketDataPage() {
   return (
     <div>
       <PageIntro
-        eyebrow="Live market context"
-        title="Market Data"
-        description="Track the benchmarks and macro assets that shape your portfolio."
+        eyebrow={m.eyebrow}
+        title={m.title}
+        description={m.description}
         action={
           <Button
             variant="outline"
@@ -33,19 +36,19 @@ export default function MarketDataPage() {
             }}
           >
             <RefreshCw data-icon="inline-start" className={refreshed ? 'mr-2 h-4 w-4 animate-spin' : 'mr-2 h-4 w-4'} />
-            {refreshed ? 'Refreshing…' : 'Refresh data'}
+            {refreshed ? '…' : '↺'}
           </Button>
         }
       />
       <Card className="border-border/70 bg-card/70 shadow-none">
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-sm font-medium">Watchlist</CardTitle>
+          <CardTitle className="text-sm font-medium">{m.watchlist}</CardTitle>
           <div className="relative w-52">
             <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
             <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search symbols"
+              placeholder={m.searchInstruments}
               className="h-9 pl-8"
             />
           </div>
@@ -54,10 +57,10 @@ export default function MarketDataPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Symbol</TableHead>
-                <TableHead>Instrument</TableHead>
-                <TableHead>Last price</TableHead>
-                <TableHead>Day change</TableHead>
+                <TableHead>{m.symbolCol}</TableHead>
+                <TableHead>{m.instrument}</TableHead>
+                <TableHead>{m.lastPrice}</TableHead>
+                <TableHead>{m.dayChange}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -75,15 +78,15 @@ export default function MarketDataPage() {
           </Table>
         </CardContent>
       </Card>
-      
+
       <Card className="mt-4 border-border/70 bg-card/70 shadow-none">
         <CardHeader>
-          <CardTitle className="text-sm font-medium">Market breadth</CardTitle>
+          <CardTitle className="text-sm font-medium">{m.marketBreadth}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="h-48">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={[{ name: 'Advancing', value: 68 }, { name: 'Declining', value: 32 }]}>
+              <BarChart data={[{ name: m.advancing, value: 68 }, { name: m.declining, value: 32 }]}>
                 <XAxis dataKey="name" axisLine={false} tickLine={false} />
                 <YAxis hide />
                 <Tooltip />

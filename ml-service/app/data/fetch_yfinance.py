@@ -7,6 +7,7 @@ from __future__ import annotations
 import logging
 from datetime import date, timedelta
 
+import numpy as np
 import pandas as pd
 import yfinance as yf
 
@@ -65,7 +66,26 @@ def fetch_prices(
     cols = ["date", "open", "high", "low", "close", "adj_close", "volume"]
     available = [c for c in cols if c in df.columns]
 
-    return df[available]
+    return clean_prices(df[available])
+
+
+def clean_prices(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Elimina filas inutilizables. Yahoo devuelve la barra del día en curso con
+    close/adj_close = NaN (mercado abierto o sin cierre): insertarla violaría NOT NULL en
+    SQLite y en Postgres guardaría NaN como precio válido, contaminando μ y Σ.
+    """
+    if df.empty:
+        return df
+    df = df.copy()
+    if "adj_close" in df.columns and "close" in df.columns:
+        df["adj_close"] = df["adj_close"].fillna(df["close"])   # solo falta el ajuste
+    price_cols = [c for c in ("close", "adj_close") if c in df.columns]
+    finite = np.isfinite(df[price_cols].astype(float)).all(axis=1) & (df[price_cols] > 0).all(axis=1)
+    dropped = int((~finite).sum())
+    if dropped:
+        logger.warning("Descartadas %d fila(s) con precio nulo/no finito", dropped)
+    return df.loc[finite].reset_index(drop=True)
 
 
 def get_asset_info(ticker: str) -> dict:
