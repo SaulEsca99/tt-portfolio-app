@@ -7,6 +7,17 @@ import { betterAuthSignUpAdapter } from "../../features/auth-flow/sign-up/sign-u
 import * as authSchema from "../db/auth.schema";
 
 export const authConfig = {
+  baseURL: process.env.BETTER_AUTH_URL ?? process.env.NEXT_PUBLIC_APP_URL,
+
+  trustedOrigins: [
+    "https://tt-portfolio-app-zeta.vercel.app",
+    // Aceptar cualquier preview de Vercel de este proyecto
+    ...(process.env.VERCEL_URL ? [`https://${process.env.VERCEL_URL}`] : []),
+    ...(process.env.VERCEL_BRANCH_URL ? [`https://${process.env.VERCEL_BRANCH_URL}`] : []),
+    // Desarrollo local
+    "http://localhost:3000",
+  ],
+
   database: drizzleAdapter(db, {
     provider: "pg",
     schema: { ...authSchema },
